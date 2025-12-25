@@ -1,0 +1,709 @@
+import { useState, useRef } from 'react';
+import { Icon } from './Icon';
+import { RANKS, JUDGMENT, ENVIRONMENTS, IMITATIONS, REGISTER_COUNTS, COMPETITOR_COUNTS, TRAFFIC_LEVELS, CUSTOMER_SEGMENTS, FLOW_LINE_RATINGS, SEASONALITY_OPTIONS, BUSY_DAY_OPTIONS, STAFF_COUNTS, SPACE_SIZES } from '../lib/constants';
+import { PREFECTURES } from '../types';
+import { formatDate, generateId } from '../lib/utils';
+import { uploadImage, deleteImage, compressImage } from '../lib/storage';
+import type { StoreVisit, Photo, CustomerSegment } from '../types';
+
+interface StoreFormModalProps {
+  initialData?: StoreVisit | null;
+  selectedDate?: Date | null;
+  onClose: () => void;
+  onSave: (data: Partial<StoreVisit>) => void;
+  loading: boolean;
+}
+
+export function StoreFormModal({
+  initialData,
+  selectedDate,
+  onClose,
+  onSave,
+  loading,
+}: StoreFormModalProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 初期写真データの処理
+  const [initialPhotos, setInitialPhotos] = useState<Photo[]>(() => {
+    if (initialData?.photoUrl) {
+      try {
+        const parsed = JSON.parse(initialData.photoUrl);
+        if (Array.isArray(parsed)) {
+          return parsed.map((p: any) => (typeof p === 'string' ? { id: null, url: p } : p));
+        }
+        return [{ id: null, url: initialData.photoUrl }];
+      } catch (e) {
+        return [{ id: null, url: initialData.photoUrl }];
+      }
+    }
+    return [];
+  });
+
+  const [formData, setFormData] = useState({
+    id: initialData?.id || generateId(),
+    date: initialData?.date || (selectedDate ? formatDate(selectedDate) : formatDate(new Date())),
+    facilityName: initialData?.facilityName || '',
+    staffName: initialData?.staffName || '',
+    prefecture: initialData?.prefecture || '',
+    rank: initialData?.rank || 'B',
+    judgment: initialData?.judgment || 'pending',
+    environment: initialData?.environment || '屋内',
+    imitationTable: initialData?.imitationTable || '設置可',
+    registerCount: initialData?.registerCount || '',
+    spaceSize: initialData?.spaceSize || '',
+    spaceSizeNote: initialData?.spaceSizeNote || '',
+    trafficCount: initialData?.trafficCount || '',
+    trafficCountNote: initialData?.trafficCountNote || '',
+    demographics: initialData?.demographics || [],
+    demographicsNote: initialData?.demographicsNote || '',
+    flowLine: initialData?.flowLine || '',
+    flowLineNote: initialData?.flowLineNote || '',
+    competitors: initialData?.competitors || '',
+    competitorsNote: initialData?.competitorsNote || '',
+    staffCount: initialData?.staffCount || '',
+    seasonality: initialData?.seasonality || '',
+    busyDay: initialData?.busyDay || '',
+    busyDayNote: initialData?.busyDayNote || '',
+    overallReview: initialData?.overallReview || '',
+    conditions: initialData?.conditions || '',
+    photos: initialPhotos,
+  });
+
+  const [uploading, setUploading] = useState(false);
+  const [viewingImage, setViewingImage] = useState<Photo | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDemographicsChange = (segment: CustomerSegment) => {
+    setFormData((prev) => {
+      const current = prev.demographics as CustomerSegment[];
+      const newDemographics = current.includes(segment)
+        ? current.filter((s) => s !== segment)
+        : [...current, segment];
+      return { ...prev, demographics: newDemographics };
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (formData.photos.length >= 3) {
+      alert('写真は最大3枚までです');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const compressedFile = await compressImage(file);
+      const index = formData.photos.length + 1;
+      const photo = await uploadImage(compressedFile, formData.id, index);
+
+      setFormData((prev) => ({
+        ...prev,
+        photos: [...prev.photos, photo],
+      }));
+    } catch (error) {
+      console.error(error);
+      alert('画像処理中にエラーが発生しました');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteImage = async (image: Photo) => {
+    setFormData((prev) => ({
+      ...prev,
+      photos: prev.photos.filter((p) => p.url !== image.url),
+    }));
+    setViewingImage(null);
+
+    if (image.id) {
+      try {
+        await deleteImage(image);
+      } catch (error) {
+        console.error('画像削除エラー:', error);
+      }
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const submitData: Partial<StoreVisit> = {
+      ...formData,
+      photoUrl: JSON.stringify(formData.photos),
+    };
+    delete (submitData as any).photos;
+    onSave(submitData);
+  };
+
+  return (
+    <>
+      {viewingImage && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in">
+          <button
+            onClick={() => setViewingImage(null)}
+            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition z-20"
+          >
+            <Icon name="X" size={24} />
+          </button>
+          <div className="relative max-w-4xl max-h-[80vh] p-2 flex flex-col items-center w-full">
+            <img
+              src={viewingImage.url}
+              alt="Enlarged"
+              className="max-w-full max-h-[70vh] rounded-lg shadow-2xl object-contain"
+            />
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => handleDeleteImage(viewingImage)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-red-600/90 hover:bg-red-700 text-white rounded-xl shadow-lg font-bold transition backdrop-blur-md"
+              >
+                <Icon name="Trash2" size={18} /> この画像を削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {uploading && (
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm text-white animate-fade-in">
+          <div className="w-12 h-12 border-4 border-white/30 border-l-orange-500 rounded-full animate-spin mb-4" />
+          <p className="font-bold text-lg">画像を圧縮・アップロード中...</p>
+        </div>
+      )}
+
+      <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-none">
+        <div
+          className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm pointer-events-auto transition-opacity"
+          onClick={onClose}
+        />
+        <div className="relative z-10 bg-white w-full sm:max-w-2xl h-[95vh] sm:h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col pointer-events-auto animate-scale-in overflow-hidden">
+          <div className="p-4 border-b bg-white flex justify-between items-center shrink-0 z-20 shadow-sm">
+            <h3 className="font-black text-slate-800 text-lg tracking-tight">
+              {initialData ? 'レポート編集' : '新規レポート作成'}
+            </h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500 transition"
+            >
+              <Icon name="X" size={20} />
+            </button>
+          </div>
+
+          <form ref={formRef} onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50/50">
+            {/* 1. 基本情報 */}
+            <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                <Icon name="Calendar" size={16} /> 基本情報
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">視察日</label>
+                  <input
+                    required
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleChange}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">担当者</label>
+                  <input
+                    required
+                    type="text"
+                    name="staffName"
+                    value={formData.staffName}
+                    onChange={handleChange}
+                    placeholder="名前"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">施設名</label>
+                <input
+                  required
+                  type="text"
+                  name="facilityName"
+                  value={formData.facilityName}
+                  onChange={handleChange}
+                  placeholder="例: イオンモール〇〇店"
+                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800 text-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">都道府県</label>
+                <select
+                  name="prefecture"
+                  value={formData.prefecture}
+                  onChange={handleChange}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
+                >
+                  <option value="">選択してください</option>
+                  {PREFECTURES.map((pref) => (
+                    <option key={pref} value={pref}>
+                      {pref}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 現場写真アップロード */}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <label className="block text-xs font-bold text-slate-600 mb-2">現場写真 (最大3枚)</label>
+                <div className="flex items-center gap-3 overflow-x-auto pb-2">
+                  {formData.photos.map((imgObj, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setViewingImage(imgObj)}
+                      className="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden border border-slate-200 group cursor-pointer hover:ring-2 ring-orange-400 transition"
+                    >
+                      <img
+                        src={imgObj.url}
+                        alt={`現場写真 ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition" />
+                      <div className="absolute bottom-1 right-1 bg-black/50 rounded-full p-1 text-white opacity-0 group-hover:opacity-100 transition scale-75">
+                        <Icon name="Maximize" size={16} />
+                      </div>
+                    </div>
+                  ))}
+
+                  {formData.photos.length < 3 && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="w-24 h-24 shrink-0 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-orange-500 hover:border-orange-300 transition"
+                    >
+                      {uploading ? (
+                        <div className="w-6 h-6 border-2 border-slate-300 border-l-orange-500 rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Icon name="Camera" size={24} />
+                          <span className="text-[10px] mt-1">追加</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </div>
+            </section>
+
+            {/* 2. 環境・設備 */}
+            <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                <Icon name="MapPin" size={16} /> 環境・設備
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-2">屋内・屋外</label>
+                  <div className="flex rounded-lg bg-slate-100 p-1">
+                    {ENVIRONMENTS.map((env) => (
+                      <button
+                        key={env}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, environment: env })}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                          formData.environment === env
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                      >
+                        {env}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="hidden" name="environment" value={formData.environment} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-2">イミテーション台</label>
+                  <div className="flex rounded-lg bg-slate-100 p-1">
+                    {IMITATIONS.map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, imitationTable: opt })}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                          formData.imitationTable === opt
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="hidden" name="imitationTable" value={formData.imitationTable} />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-600 mb-2">レジ設置台数</label>
+                <div className="flex rounded-lg bg-slate-100 p-1">
+                  {REGISTER_COUNTS.map((count) => (
+                    <button
+                      key={count}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, registerCount: count })}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        formData.registerCount === count
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      {count}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="registerCount" value={formData.registerCount} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">催事スペースの広さ</label>
+                <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                  {SPACE_SIZES.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, spaceSize: size })}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        formData.spaceSize === size
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="spaceSize" value={formData.spaceSize} />
+                <textarea
+                  name="spaceSizeNote"
+                  value={formData.spaceSizeNote}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="備考（例: 2m×3m、長机2本ギリギリ）"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                />
+              </div>
+            </section>
+
+            {/* 3. 客層・動線 */}
+            <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                <Icon name="Users" size={16} /> 客層・動線
+              </h4>
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-600 mb-2">通行量</label>
+                <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                  {TRAFFIC_LEVELS.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, trafficCount: level })}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        formData.trafficCount === level
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="trafficCount" value={formData.trafficCount} />
+                <textarea
+                  name="trafficCountNote"
+                  value={formData.trafficCountNote}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="備考（例: 何時ごろ視察、10分に20人ほどは声掛けできそう）"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-600 mb-2">客層（複数選択可）</label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  {CUSTOMER_SEGMENTS.map((segment) => (
+                    <button
+                      key={segment}
+                      type="button"
+                      onClick={() => handleDemographicsChange(segment)}
+                      className={`py-2 px-3 rounded-lg border text-xs font-bold transition ${
+                        (formData.demographics as CustomerSegment[]).includes(segment)
+                          ? 'bg-orange-100 border-orange-300 text-orange-700'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {segment}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  name="demographicsNote"
+                  value={formData.demographicsNote}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="備考（例: 現場系の男性が多め、ラグジュアリーは少なそうなど）"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-2">導線</label>
+                <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                  {FLOW_LINE_RATINGS.map((rating) => (
+                    <button
+                      key={rating}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, flowLine: rating })}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        formData.flowLine === rating
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      {rating}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="flowLine" value={formData.flowLine} />
+                <textarea
+                  name="flowLineNote"
+                  value={formData.flowLineNote}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="備考（例: エレベーター横で人通りが多いなど）"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                />
+              </div>
+            </section>
+
+            {/* 4. 運営・条件 */}
+            <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                <Icon name="Store" size={16} /> 運営・条件
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-2">適正査定員人数</label>
+                  <div className="flex rounded-lg bg-slate-100 p-1">
+                    {STAFF_COUNTS.map((count) => (
+                      <button
+                        key={count}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, staffCount: count })}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                          formData.staffCount === count
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                      >
+                        {count}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="hidden" name="staffCount" value={formData.staffCount} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-2">近隣競合店</label>
+                  <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                    {COMPETITOR_COUNTS.map((count) => (
+                      <button
+                        key={count}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, competitors: count })}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                          formData.competitors === count
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                      >
+                        {count}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="hidden" name="competitors" value={formData.competitors} />
+                  <textarea
+                    name="competitorsNote"
+                    value={formData.competitorsNote}
+                    onChange={handleChange}
+                    rows={2}
+                    placeholder="備考（例: 大吉とお宝やのフランチャイズがあるなど）"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-600 mb-2">季節</label>
+                <div className="flex rounded-lg bg-slate-100 p-1">
+                  {SEASONALITY_OPTIONS.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, seasonality: option })}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        formData.seasonality === option
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="seasonality" value={formData.seasonality} />
+              </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-600 mb-2">客が多い曜日</label>
+                <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                  {BUSY_DAY_OPTIONS.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, busyDay: option })}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        formData.busyDay === option
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="busyDay" value={formData.busyDay} />
+                <textarea
+                  name="busyDayNote"
+                  value={formData.busyDayNote}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="備考（例: 火曜日はセールのため人が多いなど）"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">条件・賃料メモ</label>
+                <textarea
+                  name="conditions"
+                  value={formData.conditions}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="賃料、什器貸出の有無など"
+                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                />
+              </div>
+            </section>
+
+            {/* 5. 最終判定 */}
+            <section className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex justify-between items-center mb-4 border-b-2 border-orange-200 pb-2">
+                <h4 className="text-3xl font-black text-slate-800 uppercase">最終判定</h4>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">総合レビュー・懸念点</label>
+                <textarea
+                  name="overallReview"
+                  value={formData.overallReview}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="担当者の最終感触、やる価値、リスクなど"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-600 mb-2">ポテンシャルランク</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.keys(RANKS).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, rank: r as any })}
+                      className={`relative py-3 rounded-xl border transition flex flex-col items-center justify-center ${
+                        formData.rank === r
+                          ? `${RANKS[r].activeBg} ${RANKS[r].border} ${RANKS[r].text} shadow-md scale-105 z-10`
+                          : `bg-white ${RANKS[r].border} text-slate-500 ${RANKS[r].hoverBg}`
+                      }`}
+                    >
+                      <span className="text-lg font-black leading-none">{r}</span>
+                      <span className="text-[9px] font-bold opacity-80">{RANKS[r].desc}</span>
+                      {formData.rank === r && (
+                        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${RANKS[r].dot}`} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="rank" value={formData.rank} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-2">出店可否ジャッジ</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(JUDGMENT).map(([k, v]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, judgment: k as any })}
+                      className={`py-2 px-3 rounded-lg border transition text-xs font-bold flex items-center justify-center gap-2 ${
+                        formData.judgment === k
+                          ? `${v.activeBg} ${v.border} ${v.color} shadow-md`
+                          : `bg-white ${v.border} text-slate-500 ${v.hoverBg}`
+                      }`}
+                    >
+                      <Icon name={v.icon} size={14} /> {v.label}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" name="judgment" value={formData.judgment} />
+              </div>
+            </section>
+          </form>
+
+          <div className="p-4 border-t bg-white shrink-0 flex gap-3 pb-8 sm:pb-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3.5 text-slate-600 font-bold bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              onClick={() => formRef.current?.requestSubmit()}
+              className="flex-[2] py-3.5 bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-l-white rounded-full animate-spin" />
+                  <span>保存中...</span>
+                </div>
+              ) : (
+                <>
+                  <Icon name="Save" size={18} /> 保存する
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
