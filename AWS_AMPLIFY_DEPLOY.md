@@ -56,12 +56,23 @@ Amplifyは自動的に`amplify.yml`を検出します。設定が正しく表示
 
 「Environment variables」セクションで以下の環境変数を追加：
 
-| 変数名 | 説明 | 例 |
-|--------|------|-----|
-| `VITE_SUPABASE_URL` | SupabaseプロジェクトのURL | `https://xxxxx.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | Supabaseの匿名キー | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
-| `VITE_GEMINI_API_KEY` | Google Gemini APIキー（オプション） | `AIzaSy...` |
-| `VITE_AWS_API_GATEWAY_URL` | AWS API GatewayエンドポイントURL（オプション） | `https://xxxxx.execute-api.ap-northeast-1.amazonaws.com/prod` |
+| 変数名 | 説明 | 例 | 注意事項 |
+|--------|------|-----|----------|
+| `VITE_SUPABASE_URL` | SupabaseプロジェクトのURL | `https://xxxxx.supabase.co` | - |
+| `VITE_SUPABASE_ANON_KEY` | Supabaseの**anon public**キー | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | ⚠️ **`service_role`キーは使用しないでください** |
+| `VITE_GEMINI_API_KEY` | Google Gemini APIキー（オプション） | `AIzaSy...` | `AI`で始まる形式 |
+| `VITE_AWS_API_GATEWAY_URL` | AWS API GatewayエンドポイントURL（オプション） | `https://xxxxx.execute-api.ap-northeast-1.amazonaws.com/prod` | - |
+
+**⚠️ 重要な注意事項**:
+
+1. **VITE_SUPABASE_ANON_KEY**:
+   - Supabase Dashboard → Settings → API → **`anon public`**キーを使用
+   - `sb_secret_`で始まる`service_role`キーは**絶対に使用しないでください**
+   - 形式: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`（長いJWTトークン）
+
+2. **VITE_GEMINI_API_KEY**:
+   - Google AI StudioまたはGoogle Cloud Consoleで取得
+   - 形式: `AIzaSy...`（`AI`で始まる）
 
 ### 3.2 環境変数の追加方法
 
