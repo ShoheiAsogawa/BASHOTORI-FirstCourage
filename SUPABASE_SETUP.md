@@ -97,51 +97,69 @@
 
 ### 3.3 Storageポリシーの設定
 
-1. 作成したバケットをクリック
-2. 「Policies」タブをクリック
-3. 「New Policy」をクリック
+Storageポリシーは**SQL Editor**で実行する方法を推奨します（より確実です）。
 
-#### ポリシー1: 公開読み取り
+#### 方法1: SQL Editorで実行（推奨）
 
-1. 「For full customization」を選択
-2. ポリシー名: `Public Read Access`
-3. 以下のSQLを貼り付け：
+1. 左メニューの「SQL Editor」を開く
+2. 「New query」をクリック
+3. 以下のSQLを**すべて**コピー＆ペーストして実行：
 
 ```sql
+-- 既存のポリシーを削除（エラーを防ぐため）
+DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Upload Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Delete Access" ON storage.objects;
+
+-- ポリシー1: 公開読み取り
 CREATE POLICY "Public Read Access"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'store-visit-photos');
-```
 
-4. 「Review」→「Save policy」をクリック
-
-#### ポリシー2: 公開アップロード（開発用）
-
-1. 「New Policy」をクリック
-2. ポリシー名: `Public Upload Access`
-3. 以下のSQLを貼り付け：
-
-```sql
+-- ポリシー2: 公開アップロード（開発用）
 CREATE POLICY "Public Upload Access"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'store-visit-photos');
-```
 
-4. 「Review」→「Save policy」をクリック
-
-#### ポリシー3: 公開削除（開発用）
-
-1. 「New Policy」をクリック
-2. ポリシー名: `Public Delete Access`
-3. 以下のSQLを貼り付け：
-
-```sql
+-- ポリシー3: 公開削除（開発用）
 CREATE POLICY "Public Delete Access"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'store-visit-photos');
 ```
 
-4. 「Review」→「Save policy」をクリック
+4. 「Run」ボタンをクリック（または `Ctrl+Enter` / `Cmd+Enter`）
+5. 成功メッセージが表示されることを確認
+
+#### 方法2: Storage UIで設定（GUI方式）
+
+もしSQL Editorでエラーが出る場合は、Storage UIから設定できます：
+
+1. 作成したバケット（`store-visit-photos`）をクリック
+2. 「Policies」タブをクリック
+3. 「New Policy」をクリック
+
+**ポリシー1: 公開読み取り**
+- ポリシー名: `Public Read Access`
+- Allowed operation: `SELECT`
+- Target roles: `public` を選択
+- USING expression: `bucket_id = 'store-visit-photos'`
+- 「Review」→「Save policy」
+
+**ポリシー2: 公開アップロード**
+- ポリシー名: `Public Upload Access`
+- Allowed operation: `INSERT`
+- Target roles: `public` を選択
+- WITH CHECK expression: `bucket_id = 'store-visit-photos'`
+- 「Review」→「Save policy」
+
+**ポリシー3: 公開削除**
+- ポリシー名: `Public Delete Access`
+- Allowed operation: `DELETE`
+- Target roles: `public` を選択
+- USING expression: `bucket_id = 'store-visit-photos'`
+- 「Review」→「Save policy」
+
+> ⚠️ **注意**: Storage UIの「For full customization」オプションでSQLを入力する場合、**CREATE POLICY文全体**を書く必要があります。既にCREATE POLICYが含まれている状態でさらにCREATE POLICYを書くとエラーになります。
 
 > ⚠️ **セキュリティ注意**: 本番環境では、認証済みユーザーのみがアップロード・削除できるようにポリシーを変更してください。
 
