@@ -47,7 +47,7 @@ export default function CalendarView() {
   const handleSave = async (data: Partial<StoreVisit>) => {
     setLoading(true);
     try {
-      const saved = await saveStoreVisit(data);
+      await saveStoreVisit(data);
       await loadData();
       setIsFormOpen(false);
       setEditingVisit(null);

@@ -55,7 +55,11 @@ export async function saveStoreVisit(visit: Partial<StoreVisit>): Promise<StoreV
   if (!supabase) {
     throw new Error('Supabase client is not initialized');
   }
-  const visitData = {
+  
+  // Supabaseクライアントを確実に取得
+  const client = supabase;
+  
+  const visitData: Record<string, any> = {
     date: visit.date,
     facility_name: visit.facilityName,
     staff_name: visit.staffName,
@@ -86,12 +90,14 @@ export async function saveStoreVisit(visit: Partial<StoreVisit>): Promise<StoreV
 
   if (visit.id) {
     // 更新
-    const { data, error } = await supabase
+    const result: any = await (client as any)
       .from('store_visits')
       .update(visitData)
       .eq('id', visit.id)
       .select()
       .single();
+    
+    const { data, error } = result;
 
     if (error) {
       console.error('Error updating store visit:', error);
@@ -101,11 +107,13 @@ export async function saveStoreVisit(visit: Partial<StoreVisit>): Promise<StoreV
     return transformStoreVisit(data);
   } else {
     // 新規作成
-    const { data, error } = await supabase
+    const result: any = await (client as any)
       .from('store_visits')
       .insert(visitData)
       .select()
       .single();
+    
+    const { data, error } = result;
 
     if (error) {
       console.error('Error creating store visit:', error);

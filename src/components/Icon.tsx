@@ -6,7 +6,7 @@ import {
   Camera, Image, Trash2, Maximize, AlertTriangle, List, LogOut, User, Lock, FileText
 } from 'lucide-react';
 
-const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const iconMap: Record<string, React.ComponentType<any>> = {
   Calendar,
   MapPin,
   Search,

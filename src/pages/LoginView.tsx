@@ -18,14 +18,18 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
     setError(null);
 
     try {
-      const { data, error } = await supabase?.auth.signInWithPassword({
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+
+      const response = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (response.error) throw response.error;
 
-      if (data.user) {
+      if (response.data.user) {
         // ユーザーのメタデータからロールを確認（必要に応じて）
         // ここでは単純にログイン成功として処理
         onLoginSuccess();

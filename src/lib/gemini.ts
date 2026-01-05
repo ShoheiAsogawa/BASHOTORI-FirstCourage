@@ -1,9 +1,6 @@
 // Gemini API呼び出し
 const AWS_API_GATEWAY_URL = import.meta.env.VITE_AWS_API_GATEWAY_URL;
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-// Gemini APIのエンドポイント（最新のモデル名を使用）
-// v1betaでgemini-1.5-flash-002を試す、それでもダメならv1でgemini-1.5-flash-002を試す
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent';
 
 export async function callGemini(prompt: string): Promise<string> {
   // 優先順位: 1. API Gateway経由、2. 直接Gemini API、3. モック
