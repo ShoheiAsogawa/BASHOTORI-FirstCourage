@@ -9,7 +9,7 @@
 - **Database**: Supabase (PostgreSQL)
 - **Storage**: Supabase Storage (画像保存)
 - **AI**: Google Gemini API (AWS Lambda経由)
-- **Hosting**: AWS (S3 + CloudFront) / Vercel / Netlify
+- **Hosting**: AWS Amplify / AWS (S3 + CloudFront) / Vercel / Netlify
 
 ## クイックスタート
 
@@ -49,13 +49,20 @@ npm run build
 
 ## セットアップガイド
 
-詳細なセットアップ手順は [SETUP.md](./SETUP.md) を参照してください。
+詳細なセットアップ手順は各ドキュメントを参照してください：
+
+- **[SETUP.md](./SETUP.md)** - 基本的なセットアップ手順
+- **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)** - Supabaseの設定
+- **[SUPABASE_AUTH_SETUP.md](./SUPABASE_AUTH_SETUP.md)** - 認証機能の設定
+- **[AWS_DEPLOY.md](./AWS_DEPLOY.md)** - AWS Lambda/API Gatewayのデプロイ
+- **[AWS_AMPLIFY_DEPLOY.md](./AWS_AMPLIFY_DEPLOY.md)** - AWS Amplifyへのデプロイ
 
 主な手順：
 1. Supabaseプロジェクトの作成とマイグレーション実行
 2. Storageバケットの作成
-3. AWS Lambda関数の作成とデプロイ
-4. 環境変数の設定
+3. AWS Lambda関数の作成とデプロイ（オプション）
+4. AWS Amplifyでのデプロイ
+5. 環境変数の設定
 
 ## プロジェクト構造
 
@@ -143,6 +150,10 @@ npm run preview
 ## ドキュメント
 
 - [SETUP.md](./SETUP.md) - 詳細なセットアップガイド
+- [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) - Supabase設定ガイド
+- [SUPABASE_AUTH_SETUP.md](./SUPABASE_AUTH_SETUP.md) - 認証機能設定ガイド
+- [AWS_DEPLOY.md](./AWS_DEPLOY.md) - AWS Lambda/API Gatewayデプロイガイド
+- [AWS_AMPLIFY_DEPLOY.md](./AWS_AMPLIFY_DEPLOY.md) - AWS Amplifyデプロイガイド
 - [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) - プロジェクト概要
 
 ## ライセンス
