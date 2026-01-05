@@ -3,7 +3,7 @@ import {
   CheckCircle2, Users, BadgeJapaneseYen, Sparkles, Save, Building,
   Footprints, Eye, Briefcase, Filter, ChevronDown, ChevronUp,
   Edit, Check, Compass, ExternalLink, Store, TrendingUp, Lightbulb,
-  Camera, Image, Trash2, Maximize, AlertTriangle
+  Camera, Image, Trash2, Maximize, AlertTriangle, List, LogOut, User, Lock, FileText
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -38,6 +38,11 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
   Trash2,
   Maximize,
   AlertTriangle,
+  List,
+  LogOut,
+  User,
+  Lock,
+  FileText,
 };
 
 interface IconProps {

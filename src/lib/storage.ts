@@ -5,6 +5,10 @@ const BUCKET_NAME = 'store-visit-photos';
 
 // 画像をアップロード
 export async function uploadImage(file: File, visitId: string, index: number): Promise<Photo> {
+  if (!supabase) {
+    throw new Error('Supabase client is not initialized. Please check your .env file and restart the dev server.');
+  }
+
   const fileExt = file.name.split('.').pop();
   const fileName = `${visitId}-${index}.${fileExt}`;
   const filePath = `${visitId}/${fileName}`;
@@ -35,6 +39,9 @@ export async function uploadImage(file: File, visitId: string, index: number): P
 
 // 画像を削除
 export async function deleteImage(photo: Photo): Promise<void> {
+  if (!supabase) {
+    throw new Error('Supabase client is not initialized');
+  }
   if (!photo.id) {
     return;
   }

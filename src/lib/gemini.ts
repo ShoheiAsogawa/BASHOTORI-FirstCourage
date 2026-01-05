@@ -1,32 +1,137 @@
-// Gemini API呼び出し（AWS Lambda経由）
+// Gemini API呼び出し
 const AWS_API_GATEWAY_URL = import.meta.env.VITE_AWS_API_GATEWAY_URL;
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+// Gemini APIのエンドポイント（最新のモデル名を使用）
+// v1betaでgemini-1.5-flash-002を試す、それでもダメならv1でgemini-1.5-flash-002を試す
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent';
 
 export async function callGemini(prompt: string): Promise<string> {
-  if (!AWS_API_GATEWAY_URL) {
-    // 開発環境ではモックレスポンスを返す
-    console.warn('AWS API Gateway URL not set, returning mock response');
-    return mockGeminiResponse(prompt);
+  // 優先順位: 1. API Gateway経由、2. 直接Gemini API、3. モック
+  if (AWS_API_GATEWAY_URL) {
+    // 本番環境: AWS Lambda経由
+    try {
+      const response = await fetch(AWS_API_GATEWAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.result || data.text || 'エラー: レスポンス形式が不正です';
+    } catch (error) {
+      console.error('Error calling API Gateway:', error);
+      // フォールバック: 直接Gemini APIを試す
+    }
   }
 
-  try {
-    const response = await fetch(`${AWS_API_GATEWAY_URL}/gemini`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+  // 開発環境: 直接Gemini APIを呼び出す
+  if (GEMINI_API_KEY) {
+    // まず利用可能なモデルを確認
+    try {
+      const listModelsUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`;
+      const modelsResponse = await fetch(listModelsUrl);
+      if (modelsResponse.ok) {
+        const modelsData = await modelsResponse.json();
+        console.log('Available models:', modelsData.models?.map((m: any) => m.name) || 'No models found');
+      }
+    } catch (e) {
+      console.warn('Could not fetch available models:', e);
     }
 
-    const data = await response.json();
-    return data.result || data.text || 'エラー: レスポンス形式が不正です';
-  } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    throw error;
+    // 利用可能なモデルから、generateContentをサポートするモデルを試す
+    // リストから: gemini-2.5-flash, gemini-2.5-pro, gemini-flash-latest, gemini-pro-latest など
+    const endpointsToTry = [
+      { version: 'v1beta', model: 'gemini-2.5-flash' },
+      { version: 'v1beta', model: 'gemini-2.5-pro' },
+      { version: 'v1beta', model: 'gemini-flash-latest' },
+      { version: 'v1beta', model: 'gemini-pro-latest' },
+      { version: 'v1beta', model: 'gemini-2.0-flash' },
+      { version: 'v1', model: 'gemini-2.5-flash' },
+      { version: 'v1', model: 'gemini-2.5-pro' },
+      { version: 'v1', model: 'gemini-flash-latest' },
+      { version: 'v1', model: 'gemini-pro-latest' },
+    ];
+
+    for (let i = 0; i < endpointsToTry.length; i++) {
+      const { version, model } = endpointsToTry[i];
+      const isLast = i === endpointsToTry.length - 1;
+      
+      try {
+        const apiUrl = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent`;
+        console.log(`Trying ${version}/${model}`);
+        
+        const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          let errorMessage = `Gemini API request failed: ${response.status}`;
+          try {
+            const errorJson = JSON.parse(errorData);
+            console.error(`${version}/${model} error:`, errorJson);
+            if (errorJson.error) {
+              errorMessage = errorJson.error.message || errorMessage;
+            }
+          } catch (e) {
+            console.error('Gemini API error (raw):', errorData);
+          }
+          
+          // 最後のエンドポイントでない場合は次を試す
+          if (!isLast) {
+            console.log(`${version}/${model} failed, trying next...`);
+            continue;
+          }
+          
+          throw new Error(errorMessage);
+        }
+
+        const data = await response.json() as any;
+
+        if (data.error) {
+          console.error(`${version}/${model} response error:`, data.error);
+          if (!isLast) {
+            continue;
+          }
+          throw new Error(data.error.message || 'Gemini API error');
+        }
+
+        const result = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini';
+        console.log(`✅ Successfully used ${version}/${model}`);
+        return result;
+      } catch (error) {
+        // 最後のエンドポイントでも失敗した場合のみエラーをスロー
+        if (isLast) {
+          console.error('Error calling Gemini API directly:', error);
+          // フォールバック: モックレスポンス
+          console.warn('Falling back to mock response');
+          return mockGeminiResponse(prompt);
+        }
+        // 次のエンドポイントを試す
+        continue;
+      }
+    }
   }
+
+  // モックレスポンス（APIキーも設定されていない場合）
+  console.warn('No API key or Gateway URL set, returning mock response');
+  return mockGeminiResponse(prompt);
 }
 
 // モックレスポンス（開発用）

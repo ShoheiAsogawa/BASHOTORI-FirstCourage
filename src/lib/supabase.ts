@@ -4,14 +4,39 @@ import type { StoreVisit } from '@/types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// デバッグ用：環境変数の確認
+console.log('Supabase環境変数チェック:', {
+  url: supabaseUrl ? '✓ 設定済み' : '✗ 未設定',
+  key: supabaseAnonKey ? '✓ 設定済み' : '✗ 未設定',
+  urlValue: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'undefined',
+});
+
+// Supabaseクライアントの初期化
+let supabase: ReturnType<typeof createClient> | null = null;
+
+if (supabaseUrl && supabaseAnonKey) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('✅ Supabase client initialized successfully');
+  } catch (error) {
+    console.error('❌ Supabase client initialization error:', error);
+  }
+} else {
+  console.error('❌ Supabase環境変数が設定されていません。');
+  console.error('   .envファイルを確認し、開発サーバーを再起動してください。');
+  console.error('   必要な環境変数:');
+  console.error('   - VITE_SUPABASE_URL');
+  console.error('   - VITE_SUPABASE_ANON_KEY');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export { supabase };
 
 // 店舗視察データの取得
 export async function getStoreVisits(): Promise<StoreVisit[]> {
+  if (!supabase) {
+    console.warn('Supabase client is not initialized');
+    return [];
+  }
   const { data, error } = await supabase
     .from('store_visits')
     .select('*')
@@ -27,6 +52,9 @@ export async function getStoreVisits(): Promise<StoreVisit[]> {
 
 // 店舗視察データの保存
 export async function saveStoreVisit(visit: Partial<StoreVisit>): Promise<StoreVisit> {
+  if (!supabase) {
+    throw new Error('Supabase client is not initialized');
+  }
   const visitData = {
     date: visit.date,
     facility_name: visit.facilityName,
@@ -90,6 +118,9 @@ export async function saveStoreVisit(visit: Partial<StoreVisit>): Promise<StoreV
 
 // 店舗視察データの削除
 export async function deleteStoreVisit(id: string): Promise<void> {
+  if (!supabase) {
+    throw new Error('Supabase client is not initialized');
+  }
   const { error } = await supabase
     .from('store_visits')
     .delete()

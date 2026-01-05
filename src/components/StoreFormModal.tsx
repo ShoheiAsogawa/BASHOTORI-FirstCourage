@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Icon } from './Icon';
 import { RANKS, JUDGMENT, ENVIRONMENTS, IMITATIONS, REGISTER_COUNTS, COMPETITOR_COUNTS, TRAFFIC_LEVELS, CUSTOMER_SEGMENTS, FLOW_LINE_RATINGS, SEASONALITY_OPTIONS, BUSY_DAY_OPTIONS, STAFF_COUNTS, SPACE_SIZES } from '../lib/constants';
-import { PREFECTURES } from '../types';
+import { PREFECTURES, type Prefecture } from '../types';
 import { formatDate, generateId } from '../lib/utils';
 import { uploadImage, deleteImage, compressImage } from '../lib/storage';
 import type { StoreVisit, Photo, CustomerSegment } from '../types';
@@ -12,6 +12,8 @@ interface StoreFormModalProps {
   onClose: () => void;
   onSave: (data: Partial<StoreVisit>) => void;
   loading: boolean;
+  readOnly?: boolean; // 読み取り専用モード
+  onEdit?: () => void; // 編集モードに切り替えるコールバック
 }
 
 export function StoreFormModal({
@@ -20,12 +22,14 @@ export function StoreFormModal({
   onClose,
   onSave,
   loading,
+  readOnly = false,
+  onEdit,
 }: StoreFormModalProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 初期写真データの処理
-  const [initialPhotos, setInitialPhotos] = useState<Photo[]>(() => {
+  const [initialPhotos] = useState<Photo[]>(() => {
     if (initialData?.photoUrl) {
       try {
         const parsed = JSON.parse(initialData.photoUrl);
@@ -101,15 +105,18 @@ export function StoreFormModal({
     try {
       const compressedFile = await compressImage(file);
       const index = formData.photos.length + 1;
-      const photo = await uploadImage(compressedFile, formData.id, index);
+      // 新規登録の場合でも一時的なIDを使用して画像をアップロード
+      const visitId = initialData?.id || formData.id;
+      const photo = await uploadImage(compressedFile, visitId, index);
 
       setFormData((prev) => ({
         ...prev,
         photos: [...prev.photos, photo],
       }));
     } catch (error) {
-      console.error(error);
-      alert('画像処理中にエラーが発生しました');
+      console.error('画像アップロードエラー:', error);
+      const errorMessage = error instanceof Error ? error.message : '画像処理中にエラーが発生しました';
+      alert(`画像アップロードエラー: ${errorMessage}\n\nSupabaseの設定を確認してください。`);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -136,11 +143,18 @@ export function StoreFormModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const submitData: Partial<StoreVisit> = {
+    const submitData = {
       ...formData,
       photoUrl: JSON.stringify(formData.photos),
-    };
+      prefecture: (formData.prefecture || undefined) as Prefecture | undefined,
+    } as Partial<StoreVisit>;
     delete (submitData as any).photos;
+    
+    // 新規登録の場合はidを削除（データベースが自動生成するため）
+    if (!initialData) {
+      delete (submitData as any).id;
+    }
+    
     onSave(submitData);
   };
 
@@ -187,7 +201,7 @@ export function StoreFormModal({
         <div className="relative z-10 bg-white w-full sm:max-w-2xl h-[95vh] sm:h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col pointer-events-auto animate-scale-in overflow-hidden">
           <div className="p-4 border-b bg-white flex justify-between items-center shrink-0 z-20 shadow-sm">
             <h3 className="font-black text-slate-800 text-lg tracking-tight">
-              {initialData ? 'レポート編集' : '新規レポート作成'}
+              {readOnly ? 'レポート詳細' : initialData ? 'レポート編集' : '新規レポート作成'}
             </h3>
             <button
               type="button"
@@ -199,6 +213,12 @@ export function StoreFormModal({
           </div>
 
           <form ref={formRef} onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50/50">
+            {readOnly && (
+              <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-800 flex items-center gap-2">
+                <Icon name="Eye" size={16} />
+                読み取り専用モードです。{onEdit && '「編集」ボタンをクリックして編集できます。'}
+              </div>
+            )}
             {/* 1. 基本情報 */}
             <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <h4 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
@@ -213,7 +233,8 @@ export function StoreFormModal({
                     name="date"
                     value={formData.date}
                     onChange={handleChange}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                    disabled={readOnly}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -225,7 +246,8 @@ export function StoreFormModal({
                     value={formData.staffName}
                     onChange={handleChange}
                     placeholder="名前"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                    disabled={readOnly}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -238,7 +260,8 @@ export function StoreFormModal({
                   value={formData.facilityName}
                   onChange={handleChange}
                   placeholder="例: イオンモール〇〇店"
-                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800 text-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                  disabled={readOnly}
+                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800 text-lg focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="mb-4">
@@ -247,7 +270,8 @@ export function StoreFormModal({
                   name="prefecture"
                   value={formData.prefecture}
                   onChange={handleChange}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none appearance-none"
+                  disabled={readOnly}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <option value="">選択してください</option>
                   {PREFECTURES.map((pref) => (
@@ -316,17 +340,18 @@ export function StoreFormModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-2">屋内・屋外</label>
-                  <div className="flex rounded-lg bg-slate-100 p-1">
+                  <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
                     {ENVIRONMENTS.map((env) => (
                       <button
                         key={env}
                         type="button"
-                        onClick={() => setFormData({ ...formData, environment: env })}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        onClick={() => !readOnly && setFormData({ ...formData, environment: env })}
+                        disabled={readOnly}
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
                           formData.environment === env
-                            ? 'bg-white text-slate-800 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-600'
-                        }`}
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                            : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                        } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         {env}
                       </button>
@@ -336,17 +361,18 @@ export function StoreFormModal({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-2">イミテーション台</label>
-                  <div className="flex rounded-lg bg-slate-100 p-1">
+                  <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
                     {IMITATIONS.map((opt) => (
                       <button
                         key={opt}
                         type="button"
-                        onClick={() => setFormData({ ...formData, imitationTable: opt })}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        onClick={() => !readOnly && setFormData({ ...formData, imitationTable: opt })}
+                        disabled={readOnly}
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
                           formData.imitationTable === opt
-                            ? 'bg-white text-slate-800 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-600'
-                        }`}
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                            : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                        } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         {opt}
                       </button>
@@ -357,17 +383,18 @@ export function StoreFormModal({
               </div>
               <div className="mb-4">
                 <label className="block text-xs font-bold text-slate-600 mb-2">レジ設置台数</label>
-                <div className="flex rounded-lg bg-slate-100 p-1">
+                <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
                   {REGISTER_COUNTS.map((count) => (
                     <button
                       key={count}
                       type="button"
-                      onClick={() => setFormData({ ...formData, registerCount: count })}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
-                        formData.registerCount === count
-                          ? 'bg-white text-slate-800 shadow-sm'
-                          : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                        onClick={() => !readOnly && setFormData({ ...formData, registerCount: count })}
+                        disabled={readOnly}
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
+                          formData.registerCount === count
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                            : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                        } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {count}
                     </button>
@@ -377,17 +404,18 @@ export function StoreFormModal({
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1.5">催事スペースの広さ</label>
-                <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                <div className="flex rounded-lg bg-slate-100 p-1 mb-2 gap-1">
                   {SPACE_SIZES.map((size) => (
                     <button
                       key={size}
                       type="button"
-                      onClick={() => setFormData({ ...formData, spaceSize: size })}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
-                        formData.spaceSize === size
-                          ? 'bg-white text-slate-800 shadow-sm'
-                          : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                        onClick={() => !readOnly && setFormData({ ...formData, spaceSize: size })}
+                        disabled={readOnly}
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
+                          formData.spaceSize === size
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                            : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                        } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {size}
                     </button>
@@ -398,9 +426,10 @@ export function StoreFormModal({
                   name="spaceSizeNote"
                   value={formData.spaceSizeNote}
                   onChange={handleChange}
+                  disabled={readOnly}
                   rows={2}
                   placeholder="備考（例: 2m×3m、長机2本ギリギリ）"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </section>
@@ -412,17 +441,18 @@ export function StoreFormModal({
               </h4>
               <div className="mb-4">
                 <label className="block text-xs font-bold text-slate-600 mb-2">通行量</label>
-                <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                <div className="flex rounded-lg bg-slate-100 p-1 mb-2 gap-1">
                   {TRAFFIC_LEVELS.map((level) => (
                     <button
                       key={level}
                       type="button"
-                      onClick={() => setFormData({ ...formData, trafficCount: level })}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
-                        formData.trafficCount === level
-                          ? 'bg-white text-slate-800 shadow-sm'
-                          : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                        onClick={() => !readOnly && setFormData({ ...formData, trafficCount: level })}
+                        disabled={readOnly}
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
+                          formData.trafficCount === level
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                            : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                        } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {level}
                     </button>
@@ -433,9 +463,10 @@ export function StoreFormModal({
                   name="trafficCountNote"
                   value={formData.trafficCountNote}
                   onChange={handleChange}
+                  disabled={readOnly}
                   rows={2}
                   placeholder="備考（例: 何時ごろ視察、10分に20人ほどは声掛けできそう）"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="mb-4">
@@ -445,12 +476,13 @@ export function StoreFormModal({
                     <button
                       key={segment}
                       type="button"
-                      onClick={() => handleDemographicsChange(segment)}
+                      onClick={() => !readOnly && handleDemographicsChange(segment)}
+                      disabled={readOnly}
                       className={`py-2 px-3 rounded-lg border text-xs font-bold transition ${
                         (formData.demographics as CustomerSegment[]).includes(segment)
                           ? 'bg-orange-100 border-orange-300 text-orange-700'
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
+                      } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {segment}
                     </button>
@@ -460,24 +492,26 @@ export function StoreFormModal({
                   name="demographicsNote"
                   value={formData.demographicsNote}
                   onChange={handleChange}
+                  disabled={readOnly}
                   rows={2}
                   placeholder="備考（例: 現場系の男性が多め、ラグジュアリーは少なそうなど）"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-2">導線</label>
-                <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                <div className="flex rounded-lg bg-slate-100 p-1 mb-2 gap-1">
                   {FLOW_LINE_RATINGS.map((rating) => (
                     <button
                       key={rating}
                       type="button"
-                      onClick={() => setFormData({ ...formData, flowLine: rating })}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
-                        formData.flowLine === rating
-                          ? 'bg-white text-slate-800 shadow-sm'
-                          : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                        onClick={() => !readOnly && setFormData({ ...formData, flowLine: rating })}
+                        disabled={readOnly}
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
+                          formData.flowLine === rating
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                            : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                        } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {rating}
                     </button>
@@ -488,9 +522,10 @@ export function StoreFormModal({
                   name="flowLineNote"
                   value={formData.flowLineNote}
                   onChange={handleChange}
+                  disabled={readOnly}
                   rows={2}
                   placeholder="備考（例: エレベーター横で人通りが多いなど）"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </section>
@@ -503,17 +538,18 @@ export function StoreFormModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-2">適正査定員人数</label>
-                  <div className="flex rounded-lg bg-slate-100 p-1">
+                  <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
                     {STAFF_COUNTS.map((count) => (
                       <button
                         key={count}
                         type="button"
-                        onClick={() => setFormData({ ...formData, staffCount: count })}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        onClick={() => !readOnly && setFormData({ ...formData, staffCount: count })}
+                        disabled={readOnly}
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
                           formData.staffCount === count
-                            ? 'bg-white text-slate-800 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-600'
-                        }`}
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                            : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                        } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         {count}
                       </button>
@@ -523,17 +559,18 @@ export function StoreFormModal({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-2">近隣競合店</label>
-                  <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                  <div className="flex rounded-lg bg-slate-100 p-1 mb-2 gap-1">
                     {COMPETITOR_COUNTS.map((count) => (
                       <button
                         key={count}
                         type="button"
-                        onClick={() => setFormData({ ...formData, competitors: count })}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                        onClick={() => !readOnly && setFormData({ ...formData, competitors: count })}
+                        disabled={readOnly}
+                        className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
                           formData.competitors === count
-                            ? 'bg-white text-slate-800 shadow-sm'
-                            : 'text-slate-400 hover:text-slate-600'
-                        }`}
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                            : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                        } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         {count}
                       </button>
@@ -544,25 +581,27 @@ export function StoreFormModal({
                     name="competitorsNote"
                     value={formData.competitorsNote}
                     onChange={handleChange}
+                    disabled={readOnly}
                     rows={2}
                     placeholder="備考（例: 大吉とお宝やのフランチャイズがあるなど）"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
               <div className="mb-4">
                 <label className="block text-xs font-bold text-slate-600 mb-2">季節</label>
-                <div className="flex rounded-lg bg-slate-100 p-1">
+                <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
                   {SEASONALITY_OPTIONS.map((option) => (
                     <button
                       key={option}
                       type="button"
-                      onClick={() => setFormData({ ...formData, seasonality: option })}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                      onClick={() => !readOnly && setFormData({ ...formData, seasonality: option })}
+                      disabled={readOnly}
+                      className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
                         formData.seasonality === option
-                          ? 'bg-white text-slate-800 shadow-sm'
-                          : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                          ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                          : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                      } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {option}
                     </button>
@@ -572,17 +611,18 @@ export function StoreFormModal({
               </div>
               <div className="mb-4">
                 <label className="block text-xs font-bold text-slate-600 mb-2">客が多い曜日</label>
-                <div className="flex rounded-lg bg-slate-100 p-1 mb-2">
+                <div className="flex rounded-lg bg-slate-100 p-1 mb-2 gap-1">
                   {BUSY_DAY_OPTIONS.map((option) => (
                     <button
                       key={option}
                       type="button"
-                      onClick={() => setFormData({ ...formData, busyDay: option })}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition ${
+                      onClick={() => !readOnly && setFormData({ ...formData, busyDay: option })}
+                      disabled={readOnly}
+                      className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
                         formData.busyDay === option
-                          ? 'bg-white text-slate-800 shadow-sm'
-                          : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                          ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
+                          : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
+                      } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {option}
                     </button>
@@ -593,9 +633,10 @@ export function StoreFormModal({
                   name="busyDayNote"
                   value={formData.busyDayNote}
                   onChange={handleChange}
+                  disabled={readOnly}
                   rows={2}
                   placeholder="備考（例: 火曜日はセールのため人が多いなど）"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
@@ -604,9 +645,10 @@ export function StoreFormModal({
                   name="conditions"
                   value={formData.conditions}
                   onChange={handleChange}
+                  disabled={readOnly}
                   rows={2}
                   placeholder="賃料、什器貸出の有無など"
-                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </section>
@@ -623,9 +665,10 @@ export function StoreFormModal({
                   name="overallReview"
                   value={formData.overallReview}
                   onChange={handleChange}
+                  disabled={readOnly}
                   rows={3}
                   placeholder="担当者の最終感触、やる価値、リスクなど"
-                  className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="mb-6">
@@ -635,12 +678,13 @@ export function StoreFormModal({
                     <button
                       key={r}
                       type="button"
-                      onClick={() => setFormData({ ...formData, rank: r as any })}
+                      onClick={() => !readOnly && setFormData({ ...formData, rank: r as any })}
+                      disabled={readOnly}
                       className={`relative py-3 rounded-xl border transition flex flex-col items-center justify-center ${
                         formData.rank === r
                           ? `${RANKS[r].activeBg} ${RANKS[r].border} ${RANKS[r].text} shadow-md scale-105 z-10`
                           : `bg-white ${RANKS[r].border} text-slate-500 ${RANKS[r].hoverBg}`
-                      }`}
+                      } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <span className="text-lg font-black leading-none">{r}</span>
                       <span className="text-[9px] font-bold opacity-80">{RANKS[r].desc}</span>
@@ -659,12 +703,13 @@ export function StoreFormModal({
                     <button
                       key={k}
                       type="button"
-                      onClick={() => setFormData({ ...formData, judgment: k as any })}
+                      onClick={() => !readOnly && setFormData({ ...formData, judgment: k as any })}
+                      disabled={readOnly}
                       className={`py-2 px-3 rounded-lg border transition text-xs font-bold flex items-center justify-center gap-2 ${
                         formData.judgment === k
                           ? `${v.activeBg} ${v.border} ${v.color} shadow-md`
                           : `bg-white ${v.border} text-slate-500 ${v.hoverBg}`
-                      }`}
+                      } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <Icon name={v.icon} size={14} /> {v.label}
                     </button>
@@ -676,30 +721,53 @@ export function StoreFormModal({
           </form>
 
           <div className="p-4 border-t bg-white shrink-0 flex gap-3 pb-8 sm:pb-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3.5 text-slate-600 font-bold bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              onClick={() => formRef.current?.requestSubmit()}
-              className="flex-[2] py-3.5 bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white/30 border-l-white rounded-full animate-spin" />
-                  <span>保存中...</span>
-                </div>
-              ) : (
-                <>
-                  <Icon name="Save" size={18} /> 保存する
-                </>
-              )}
-            </button>
+            {readOnly ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 py-3.5 text-slate-600 font-bold bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition"
+                >
+                  閉じる
+                </button>
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={onEdit}
+                    className="flex-[2] py-3.5 bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <Icon name="Edit" size={18} /> 編集
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 py-3.5 text-slate-600 font-bold bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  onClick={() => formRef.current?.requestSubmit()}
+                  className="flex-[2] py-3.5 bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-l-white rounded-full animate-spin" />
+                      <span>保存中...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Icon name="Save" size={18} /> 保存する
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

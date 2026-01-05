@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Icon } from '../components/Icon';
 import { Calendar } from '../components/Calendar';
-import { Dashboard } from '../components/Dashboard';
 import { StoreFormModal } from '../components/StoreFormModal';
 import { DayDetailModal } from '../components/DayDetailModal';
 import { getStoreVisits, saveStoreVisit, deleteStoreVisit } from '../lib/supabase';
 import { formatDate } from '../lib/utils';
+import { isAdmin } from '../lib/auth';
 import type { StoreVisit } from '../types';
 
 export default function CalendarView() {
@@ -19,12 +19,19 @@ export default function CalendarView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRank, setFilterRank] = useState<string>('ALL');
   const [filterJudgment, setFilterJudgment] = useState<string>('ALL');
-  const [adviceLoading, setAdviceLoading] = useState(false);
-  const [adviceResult, setAdviceResult] = useState('');
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadData().catch((error) => {
+      console.error('データ読み込みエラー:', error);
+    });
+    checkAdminStatus();
   }, []);
+
+  const checkAdminStatus = async () => {
+    const admin = await isAdmin();
+    setUserIsAdmin(admin);
+  };
 
   const loadData = async () => {
     try {
@@ -63,15 +70,6 @@ export default function CalendarView() {
     }
   };
 
-  const handleGetAdvice = async (stats: any) => {
-    setAdviceLoading(true);
-    setAdviceResult('');
-    // TODO: Gemini API呼び出し
-    setTimeout(() => {
-      setAdviceResult('今月の実績を踏まえ、優先順位をつけてフォローアップを強化しましょう。');
-      setAdviceLoading(false);
-    }, 1000);
-  };
 
   const filteredVisits = useMemo(() => {
     return visits.filter((v) => {
@@ -95,34 +93,28 @@ export default function CalendarView() {
       <Navbar />
       <main className="p-4 sm:p-6 animate-fade-in">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="lg:col-span-2">
-              <Dashboard
-                visits={visits}
-                currentDate={currentDate}
-                onGetAdvice={handleGetAdvice}
-                adviceLoading={adviceLoading}
-                adviceResult={adviceResult}
-              />
-              {/* Search & Filter */}
-              <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-4">
-                <div className="relative flex-1">
+          {/* ヘッダーセクション: 検索・日付・新規登録を整列 */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+              {/* 左側: 検索とフィルター */}
+              <div className="flex-1 space-y-3">
+                <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Icon name="Search" size={16} />
+                    <Icon name="Search" size={18} />
                   </span>
                   <input
                     type="text"
-                    placeholder="施設・担当者で検索..."
+                    placeholder="施設名・担当者で検索..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none transition"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <select
                     value={filterRank}
                     onChange={(e) => setFilterRank(e.target.value)}
-                    className="bg-white border border-slate-200 rounded-lg text-sm px-3 py-2.5 outline-none focus:border-orange-500 font-bold text-slate-600 w-full sm:w-auto"
+                    className="bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 font-bold text-slate-600 min-w-[100px]"
                   >
                     <option value="ALL">全ランク</option>
                     <option value="S">S</option>
@@ -133,7 +125,7 @@ export default function CalendarView() {
                   <select
                     value={filterJudgment}
                     onChange={(e) => setFilterJudgment(e.target.value)}
-                    className="bg-white border border-slate-200 rounded-lg text-sm px-3 py-2.5 outline-none focus:border-orange-500 font-bold text-slate-600 w-full sm:w-auto"
+                    className="bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 font-bold text-slate-600 min-w-[100px]"
                   >
                     <option value="ALL">全判定</option>
                     <option value="pending">調査中</option>
@@ -143,62 +135,67 @@ export default function CalendarView() {
                   </select>
                 </div>
               </div>
-            </div>
 
-            <div className="lg:col-span-1 flex flex-col gap-4">
-              <div className="bg-white p-3 lg:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center h-full">
-                <h2 className="text-xl lg:text-3xl font-bold text-slate-800 mb-3 lg:mb-6">
-                  {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月
-                </h2>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() =>
-                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))
-                    }
-                    className="p-2 lg:p-4 bg-slate-50 hover:bg-orange-50 text-slate-600 hover:text-orange-600 rounded-2xl transition"
-                  >
-                    <Icon name="ChevronLeft" size={24} />
-                  </button>
+              {/* 中央: 日付表示とナビゲーション */}
+              <div className="flex items-center gap-4 lg:mx-6">
+                <button
+                  onClick={() =>
+                    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))
+                  }
+                  className="p-2 bg-slate-50 hover:bg-orange-50 text-slate-600 hover:text-orange-600 rounded-xl transition"
+                  aria-label="前月"
+                >
+                  <Icon name="ChevronLeft" size={20} />
+                </button>
+                <div className="text-center min-w-[140px]">
+                  <h2 className="text-xl lg:text-2xl font-bold text-slate-800">
+                    {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月
+                  </h2>
                   <button
                     onClick={() => setCurrentDate(new Date())}
-                    className="px-4 py-2 lg:px-6 lg:py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-2xl transition text-sm"
+                    className="mt-1 text-xs text-slate-500 hover:text-orange-600 font-medium transition"
                   >
-                    今日
-                  </button>
-                  <button
-                    onClick={() =>
-                      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
-                    }
-                    className="p-2 lg:p-4 bg-slate-50 hover:bg-orange-50 text-slate-600 hover:text-orange-600 rounded-2xl transition"
-                  >
-                    <Icon name="ChevronRight" size={24} />
+                    今日に戻る
                   </button>
                 </div>
+                <button
+                  onClick={() =>
+                    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
+                  }
+                  className="p-2 bg-slate-50 hover:bg-orange-50 text-slate-600 hover:text-orange-600 rounded-xl transition"
+                  aria-label="次月"
+                >
+                  <Icon name="ChevronRight" size={20} />
+                </button>
               </div>
-            </div>
-          </div>
 
-          <div className="mb-4 flex justify-end">
-            <button
-              onClick={() => {
-                setEditingVisit(null);
-                setIsFormOpen(true);
-              }}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 transition active:scale-95 flex items-center gap-2"
-            >
-              <Icon name="Plus" size={18} /> 新規登録
-            </button>
+              {/* 右側: 新規登録ボタン（管理者のみ） */}
+              {userIsAdmin && (
+                <div className="flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      setEditingVisit(null);
+                      setIsFormOpen(true);
+                    }}
+                    className="w-full lg:w-auto bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/20 transition active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Icon name="Plus" size={18} />
+                    新規登録
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <Calendar
             currentDate={currentDate}
             visits={filteredVisits}
             onDateClick={(date) => setSelectedDateObj(date)}
-            onAddClick={(date) => {
+            onAddClick={userIsAdmin ? (date) => {
               setEditingVisit(null);
               setSelectedDateObj(date);
               setIsFormOpen(true);
-            }}
+            } : undefined}
           />
         </div>
       </main>
@@ -207,15 +204,15 @@ export default function CalendarView() {
         dateObj={selectedDateObj}
         visits={selectedDateObj ? getDayVisits(selectedDateObj) : []}
         onClose={() => setSelectedDateObj(null)}
-        onAdd={() => {
+        onAdd={userIsAdmin ? () => {
           setIsFormOpen(true);
           setEditingVisit(null);
-        }}
-        onEdit={(v) => {
+        } : undefined}
+        onEdit={userIsAdmin ? (v) => {
           setIsFormOpen(true);
           setEditingVisit(v);
-        }}
-        onDelete={handleDelete}
+        } : undefined}
+        onDelete={userIsAdmin ? handleDelete : undefined}
       />
 
       {isFormOpen && (
@@ -228,6 +225,7 @@ export default function CalendarView() {
           }}
           onSave={handleSave}
           loading={loading}
+          readOnly={!userIsAdmin}
         />
       )}
     </div>

@@ -1,8 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Icon } from './Icon';
+import { supabase } from '../lib/supabase';
 
 export function Navbar() {
   const location = useLocation();
+
+  const handleLogout = async () => {
+    await supabase?.auth.signOut();
+  };
 
   return (
     <header className="bg-white sticky top-0 z-40 px-6 py-4 border-b border-slate-200 shadow-sm/50 backdrop-blur-xl bg-white/80">
@@ -51,6 +56,13 @@ export function Navbar() {
               </Link>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition flex items-center gap-2"
+          >
+            <Icon name="LogOut" size={16} />
+            <span className="hidden sm:inline">ログアウト</span>
+          </button>
         </div>
 
         <div className="md:hidden flex bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 w-full">

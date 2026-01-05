@@ -6,8 +6,8 @@ interface DayDetailModalProps {
   dateObj: Date | null;
   visits: StoreVisit[];
   onClose: () => void;
-  onAdd: () => void;
-  onEdit: (visit: StoreVisit) => void;
+  onAdd?: () => void;
+  onEdit?: (visit: StoreVisit) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -51,8 +51,10 @@ export function DayDetailModal({
             visits.map((v) => (
               <div
                 key={v.id}
-                onClick={() => onEdit(v)}
-                className="group bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-200 transition cursor-pointer relative overflow-hidden"
+                onClick={() => onEdit && onEdit(v)}
+                className={`group bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-200 transition relative overflow-hidden ${
+                  onEdit ? 'cursor-pointer' : ''
+                }`}
               >
                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${RANKS[v.rank].dot}`} />
                 <div className="flex justify-between items-start mb-1 pl-2">
@@ -68,9 +70,11 @@ export function DayDetailModal({
                       {JUDGMENT[v.judgment].label}
                     </span>
                   </div>
-                  <div className="text-slate-300 group-hover:text-orange-500 transition text-xs flex items-center gap-1">
-                    編集 <Icon name="Edit" size={12} />
-                  </div>
+                  {onEdit && (
+                    <div className="text-slate-300 group-hover:text-orange-500 transition text-xs flex items-center gap-1">
+                      編集 <Icon name="Edit" size={12} />
+                    </div>
+                  )}
                 </div>
                 <h4 className="font-bold text-slate-800 pl-2 text-lg mb-1">{v.facilityName}</h4>
                 <div className="pl-2 text-xs text-slate-500 flex flex-wrap gap-3">
@@ -96,14 +100,16 @@ export function DayDetailModal({
           )}
         </div>
 
-        <div className="p-4 bg-white border-t border-slate-100">
-          <button
-            onClick={onAdd}
-            className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-200 transition flex items-center justify-center gap-2 active:scale-95"
-          >
-            <Icon name="Plus" size={18} /> 新しい視察を追加
-          </button>
-        </div>
+        {onAdd && (
+          <div className="p-4 bg-white border-t border-slate-100">
+            <button
+              onClick={onAdd}
+              className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-200 transition flex items-center justify-center gap-2 active:scale-95"
+            >
+              <Icon name="Plus" size={18} /> 新しい視察を追加
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

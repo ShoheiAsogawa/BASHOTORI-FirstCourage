@@ -7,7 +7,7 @@ interface CalendarProps {
   currentDate: Date;
   visits: StoreVisit[];
   onDateClick: (date: Date) => void;
-  onAddClick: (date: Date) => void;
+  onAddClick?: (date: Date) => void;
 }
 
 export function Calendar({ currentDate, visits, onDateClick, onAddClick }: CalendarProps) {
@@ -75,14 +75,15 @@ export function Calendar({ currentDate, visits, onDateClick, onAddClick }: Calen
                 {dayVisits.length > 3 && (
                   <div className="text-[10px] text-slate-400 pl-1">他 {dayVisits.length - 3} 件...</div>
                 )}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddClick(dateObj);
-                    }}
-                    className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-500 hover:text-white"
-                  >
+                {onAddClick && (
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddClick(dateObj);
+                      }}
+                      className="p-1 bg-orange-100 text-orange-600 rounded hover:bg-orange-500 hover:text-white"
+                    >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="14"
@@ -96,8 +97,9 @@ export function Calendar({ currentDate, visits, onDateClick, onAddClick }: Calen
                     >
                       <path d="M5 12h14M12 5v14" />
                     </svg>
-                  </button>
-                </div>
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex sm:hidden flex-wrap content-start gap-1 mt-1">
                 {dayVisits.map((v, idx) => (

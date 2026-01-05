@@ -8,8 +8,30 @@ export default function DashboardView() {
   const [visits, setVisits] = useState<StoreVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [adviceLoading, setAdviceLoading] = useState(false);
-  const [adviceResult, setAdviceResult] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
+  const [filterRank, setFilterRank] = useState<string>('ALL');
+  const [appliedFilterRank, setAppliedFilterRank] = useState<string>('ALL');
+  const [filterJudgment, setFilterJudgment] = useState<string>('ALL');
+  const [appliedFilterJudgment, setAppliedFilterJudgment] = useState<string>('ALL');
+  const [filterPrefecture, setFilterPrefecture] = useState<string>('ALL');
+  const [appliedFilterPrefecture, setAppliedFilterPrefecture] = useState<string>('ALL');
+  const [filterEnvironment, setFilterEnvironment] = useState<string>('ALL');
+  const [appliedFilterEnvironment, setAppliedFilterEnvironment] = useState<string>('ALL');
+  const [filterRegisterCount, setFilterRegisterCount] = useState<string>('ALL');
+  const [appliedFilterRegisterCount, setAppliedFilterRegisterCount] = useState<string>('ALL');
+  const [filterTrafficCount, setFilterTrafficCount] = useState<string>('ALL');
+  const [appliedFilterTrafficCount, setAppliedFilterTrafficCount] = useState<string>('ALL');
+  const [filterSeasonality, setFilterSeasonality] = useState<string>('ALL');
+  const [appliedFilterSeasonality, setAppliedFilterSeasonality] = useState<string>('ALL');
+  const [filterBusyDay, setFilterBusyDay] = useState<string>('ALL');
+  const [appliedFilterBusyDay, setAppliedFilterBusyDay] = useState<string>('ALL');
+  const [filterStaffCount, setFilterStaffCount] = useState<string>('ALL');
+  const [appliedFilterStaffCount, setAppliedFilterStaffCount] = useState<string>('ALL');
+  const [filterSpaceSize, setFilterSpaceSize] = useState<string>('ALL');
+  const [appliedFilterSpaceSize, setAppliedFilterSpaceSize] = useState<string>('ALL');
+  const [filterCompetitors, setFilterCompetitors] = useState<string>('ALL');
+  const [appliedFilterCompetitors, setAppliedFilterCompetitors] = useState<string>('ALL');
 
   useEffect(() => {
     loadData();
@@ -26,15 +48,45 @@ export default function DashboardView() {
     }
   };
 
-  const handleGetAdvice = async (stats: any) => {
-    setAdviceLoading(true);
-    setAdviceResult('');
-    // TODO: Gemini API呼び出し
-    setTimeout(() => {
-      setAdviceResult('今月の実績を踏まえ、優先順位をつけてフォローアップを強化しましょう。');
-      setAdviceLoading(false);
-    }, 1000);
+  const handleSearch = () => {
+    setAppliedSearchTerm(searchTerm);
+    setAppliedFilterRank(filterRank);
+    setAppliedFilterJudgment(filterJudgment);
+    setAppliedFilterPrefecture(filterPrefecture);
+    setAppliedFilterEnvironment(filterEnvironment);
+    setAppliedFilterRegisterCount(filterRegisterCount);
+    setAppliedFilterTrafficCount(filterTrafficCount);
+    setAppliedFilterSeasonality(filterSeasonality);
+    setAppliedFilterBusyDay(filterBusyDay);
+    setAppliedFilterStaffCount(filterStaffCount);
+    setAppliedFilterSpaceSize(filterSpaceSize);
+    setAppliedFilterCompetitors(filterCompetitors);
   };
+
+  const filteredVisits = useMemo(() => {
+    return visits.filter((v) => {
+      const matchesSearch =
+        v.facilityName?.toLowerCase().includes(appliedSearchTerm.toLowerCase()) ||
+        v.staffName?.toLowerCase().includes(appliedSearchTerm.toLowerCase());
+      const matchesRank = appliedFilterRank === 'ALL' || v.rank === appliedFilterRank;
+      const matchesJudgment = appliedFilterJudgment === 'ALL' || v.judgment === appliedFilterJudgment;
+      const matchesPrefecture = appliedFilterPrefecture === 'ALL' || v.prefecture === appliedFilterPrefecture;
+      const matchesEnvironment = appliedFilterEnvironment === 'ALL' || v.environment === appliedFilterEnvironment;
+      const matchesRegisterCount = appliedFilterRegisterCount === 'ALL' || v.registerCount === appliedFilterRegisterCount;
+      const matchesTrafficCount = appliedFilterTrafficCount === 'ALL' || v.trafficCount === appliedFilterTrafficCount;
+      const matchesSeasonality = appliedFilterSeasonality === 'ALL' || v.seasonality === appliedFilterSeasonality;
+      const matchesBusyDay = appliedFilterBusyDay === 'ALL' || v.busyDay === appliedFilterBusyDay;
+      const matchesStaffCount = appliedFilterStaffCount === 'ALL' || v.staffCount === appliedFilterStaffCount;
+      const matchesSpaceSize = appliedFilterSpaceSize === 'ALL' || v.spaceSize === appliedFilterSpaceSize;
+      const matchesCompetitors = appliedFilterCompetitors === 'ALL' || v.competitors === appliedFilterCompetitors;
+      return matchesSearch && matchesRank && matchesJudgment && matchesPrefecture && 
+             matchesEnvironment && matchesRegisterCount && matchesTrafficCount && 
+             matchesSeasonality && matchesBusyDay && matchesStaffCount && 
+             matchesSpaceSize && matchesCompetitors;
+    });
+  }, [visits, appliedSearchTerm, appliedFilterRank, appliedFilterJudgment, appliedFilterPrefecture, 
+      appliedFilterEnvironment, appliedFilterRegisterCount, appliedFilterTrafficCount, 
+      appliedFilterSeasonality, appliedFilterBusyDay, appliedFilterStaffCount, appliedFilterSpaceSize, appliedFilterCompetitors]);
 
   if (loading) {
     return (
@@ -57,9 +109,32 @@ export default function DashboardView() {
           <Dashboard
             visits={visits}
             currentDate={currentDate}
-            onGetAdvice={handleGetAdvice}
-            adviceLoading={adviceLoading}
-            adviceResult={adviceResult}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onSearch={handleSearch}
+            filterRank={filterRank}
+            onFilterRankChange={setFilterRank}
+            filterJudgment={filterJudgment}
+            onFilterJudgmentChange={setFilterJudgment}
+            filterPrefecture={filterPrefecture}
+            onFilterPrefectureChange={setFilterPrefecture}
+            filterEnvironment={filterEnvironment}
+            onFilterEnvironmentChange={setFilterEnvironment}
+            filterRegisterCount={filterRegisterCount}
+            onFilterRegisterCountChange={setFilterRegisterCount}
+            filterTrafficCount={filterTrafficCount}
+            onFilterTrafficCountChange={setFilterTrafficCount}
+            filterSeasonality={filterSeasonality}
+            onFilterSeasonalityChange={setFilterSeasonality}
+            filterBusyDay={filterBusyDay}
+            onFilterBusyDayChange={setFilterBusyDay}
+            filterStaffCount={filterStaffCount}
+            onFilterStaffCountChange={setFilterStaffCount}
+            filterSpaceSize={filterSpaceSize}
+            onFilterSpaceSizeChange={setFilterSpaceSize}
+            filterCompetitors={filterCompetitors}
+            onFilterCompetitorsChange={setFilterCompetitors}
+            filteredVisits={filteredVisits}
           />
         </div>
       </main>

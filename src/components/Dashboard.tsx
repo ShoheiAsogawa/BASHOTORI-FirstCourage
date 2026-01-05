@@ -1,24 +1,88 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Icon } from './Icon';
-import { RANKS, JUDGMENT } from '../lib/constants';
+import { StoreFormModal } from './StoreFormModal';
+import { RANKS, JUDGMENT, ENVIRONMENTS, REGISTER_COUNTS, TRAFFIC_LEVELS, SEASONALITY_OPTIONS, BUSY_DAY_OPTIONS, STAFF_COUNTS, SPACE_SIZES, COMPETITOR_COUNTS } from '../lib/constants';
+import { PREFECTURES } from '../types';
+import { formatDateJP } from '../lib/utils';
+import { isAdmin } from '../lib/auth';
 import type { StoreVisit } from '../types';
 
 interface DashboardProps {
   visits: StoreVisit[];
   currentDate: Date;
-  onGetAdvice: (stats: any) => void;
-  adviceLoading: boolean;
-  adviceResult: string;
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  onSearch: () => void;
+  filterRank: string;
+  onFilterRankChange: (rank: string) => void;
+  filterJudgment: string;
+  onFilterJudgmentChange: (judgment: string) => void;
+  filterPrefecture: string;
+  onFilterPrefectureChange: (prefecture: string) => void;
+  filterEnvironment: string;
+  onFilterEnvironmentChange: (environment: string) => void;
+  filterRegisterCount: string;
+  onFilterRegisterCountChange: (count: string) => void;
+  filterTrafficCount: string;
+  onFilterTrafficCountChange: (traffic: string) => void;
+  filterSeasonality: string;
+  onFilterSeasonalityChange: (seasonality: string) => void;
+  filterBusyDay: string;
+  onFilterBusyDayChange: (busyDay: string) => void;
+  filterStaffCount: string;
+  onFilterStaffCountChange: (staffCount: string) => void;
+  filterSpaceSize: string;
+  onFilterSpaceSizeChange: (spaceSize: string) => void;
+  filterCompetitors: string;
+  onFilterCompetitorsChange: (competitors: string) => void;
+  filteredVisits: StoreVisit[];
 }
 
 export function Dashboard({
   visits,
   currentDate,
-  onGetAdvice,
-  adviceLoading,
-  adviceResult,
+  searchTerm,
+  onSearchChange,
+  onSearch,
+  filterRank,
+  onFilterRankChange,
+  filterJudgment,
+  onFilterJudgmentChange,
+  filterPrefecture,
+  onFilterPrefectureChange,
+  filterEnvironment,
+  onFilterEnvironmentChange,
+  filterRegisterCount,
+  onFilterRegisterCountChange,
+  filterTrafficCount,
+  onFilterTrafficCountChange,
+  filterSeasonality,
+  onFilterSeasonalityChange,
+  filterBusyDay,
+  onFilterBusyDayChange,
+  filterStaffCount,
+  onFilterStaffCountChange,
+  filterSpaceSize,
+  onFilterSpaceSizeChange,
+  filterCompetitors,
+  onFilterCompetitorsChange,
+  filteredVisits,
 }: DashboardProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [sortField, setSortField] = useState<'date' | 'facilityName' | 'staffName' | 'prefecture' | 'rank' | 'judgment' | 'environment' | 'registerCount' | 'trafficCount'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedVisit, setSelectedVisit] = useState<StoreVisit | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
+
+  const checkAdminStatus = async () => {
+    const admin = await isAdmin();
+    setUserIsAdmin(admin);
+  };
 
   const stats = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -58,6 +122,11 @@ export function Dashboard({
       if (byJudgment[v.judgment] !== undefined) byJudgment[v.judgment]++;
     });
 
+    // 成功率計算
+    const successRate = monthTotal > 0 
+      ? ((byJudgment.approved + byJudgment.negotiating) / monthTotal * 100).toFixed(1)
+      : '0.0';
+
     return {
       year,
       month: month + 1,
@@ -69,6 +138,7 @@ export function Dashboard({
       diffSign,
       byRank,
       byJudgment,
+      successRate,
     };
   }, [visits, currentDate]);
 
@@ -136,6 +206,24 @@ export function Dashboard({
 
       {isOpen && (
         <div className="px-6 pb-6 pt-4 border-t border-slate-100 bg-slate-50/50 animate-fade-in">
+          {/* 追加統計情報 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+              <div className="text-xs font-bold text-slate-400 uppercase mb-2">成功率</div>
+              <div className="text-3xl font-black text-slate-800">{stats.successRate}%</div>
+              <div className="text-xs text-slate-500 mt-1">
+                出店可・交渉中: {stats.byJudgment.approved + stats.byJudgment.negotiating}件
+              </div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+              <div className="text-xs font-bold text-slate-400 uppercase mb-2">S&Aランク</div>
+              <div className="text-3xl font-black text-slate-800">{stats.monthHot}</div>
+              <div className="text-xs text-slate-500 mt-1">
+                月間 {stats.monthTotal > 0 ? ((stats.monthHot / stats.monthTotal) * 100).toFixed(1) : 0}%
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
             <div>
               <h5 className="text-xs font-bold text-slate-400 uppercase mb-3">
@@ -206,45 +294,527 @@ export function Dashboard({
               </div>
             </div>
           </div>
-          <div>
+
+          {/* 検索・フィルタリング */}
+          <div className="mb-6">
             <h5 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1">
-              <Icon name="Sparkles" size={14} /> AI営業アドバイス
+              <Icon name="Filter" size={14} /> 検索・フィルタリング
             </h5>
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="flex-1 min-h-[60px] flex items-center">
-                  {adviceResult ? (
-                    <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                      {adviceResult}
-                    </div>
-                  ) : (
-                    <div className="text-slate-400 text-xs w-full text-center sm:text-left">
-                      今月のデータに基づいた<br className="sm:hidden" />
-                      アドバイスを生成します
-                    </div>
-                  )}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+              {/* 検索欄 */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Icon name="Search" size={16} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="施設名・担当者名で検索..."
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        onSearch();
+                      }
+                    }}
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+                  />
                 </div>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onGetAdvice(stats);
-                  }}
-                  disabled={adviceLoading}
-                  className="shrink-0 w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-lg text-xs shadow transition flex items-center justify-center gap-2"
+                  onClick={onSearch}
+                  className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-sm transition flex items-center gap-2 shadow-md shadow-orange-500/30 active:scale-95"
                 >
-                  {adviceLoading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>生成中...</span>
-                    </div>
-                  ) : (
-                    <>アドバイスをもらう</>
-                  )}
+                  <Icon name="Search" size={16} />
+                  検索
                 </button>
+              </div>
+
+              {/* フィルター */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">ランク</label>
+                    <select
+                      value={filterRank}
+                      onChange={(e) => onFilterRankChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">全ランク</option>
+                      <option value="S">S</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">判定</label>
+                    <select
+                      value={filterJudgment}
+                      onChange={(e) => onFilterJudgmentChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">全判定</option>
+                      <option value="pending">調査中</option>
+                      <option value="negotiating">交渉中</option>
+                      <option value="approved">出店可</option>
+                      <option value="rejected">不可/NG</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">都道府県</label>
+                    <select
+                      value={filterPrefecture}
+                      onChange={(e) => onFilterPrefectureChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">全都道府県</option>
+                      {PREFECTURES.map((pref) => (
+                        <option key={pref} value={pref}>
+                          {pref}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">環境</label>
+                    <select
+                      value={filterEnvironment}
+                      onChange={(e) => onFilterEnvironmentChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">全環境</option>
+                      {ENVIRONMENTS.map((env) => (
+                        <option key={env} value={env}>
+                          {env}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">レジ設置台数</label>
+                    <select
+                      value={filterRegisterCount}
+                      onChange={(e) => onFilterRegisterCountChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">すべて</option>
+                      {REGISTER_COUNTS.map((count) => (
+                        <option key={count} value={count}>
+                          {count}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">通行量</label>
+                    <select
+                      value={filterTrafficCount}
+                      onChange={(e) => onFilterTrafficCountChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">すべて</option>
+                      {TRAFFIC_LEVELS.map((level) => (
+                        <option key={level} value={level}>
+                          {level}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">季節</label>
+                    <select
+                      value={filterSeasonality}
+                      onChange={(e) => onFilterSeasonalityChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">すべて</option>
+                      {SEASONALITY_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">客が多い曜日</label>
+                    <select
+                      value={filterBusyDay}
+                      onChange={(e) => onFilterBusyDayChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">すべて</option>
+                      {BUSY_DAY_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">適正査定員人数</label>
+                    <select
+                      value={filterStaffCount}
+                      onChange={(e) => onFilterStaffCountChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">すべて</option>
+                      {STAFF_COUNTS.map((count) => (
+                        <option key={count} value={count}>
+                          {count}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">催事スペース</label>
+                    <select
+                      value={filterSpaceSize}
+                      onChange={(e) => onFilterSpaceSizeChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">すべて</option>
+                      {SPACE_SIZES.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">近隣競合店</label>
+                    <select
+                      value={filterCompetitors}
+                      onChange={(e) => onFilterCompetitorsChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="ALL">すべて</option>
+                      {COMPETITOR_COUNTS.map((count) => (
+                        <option key={count} value={count}>
+                          {count}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* データテーブル */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h5 className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1">
+                <Icon name="List" size={14} /> 視察記録一覧
+              </h5>
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                {filteredVisits.length}件
+              </span>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'date') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('date');
+                            setSortDirection('desc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          日付
+                          {sortField === 'date' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'facilityName') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('facilityName');
+                            setSortDirection('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          施設名
+                          {sortField === 'facilityName' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'staffName') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('staffName');
+                            setSortDirection('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          担当者
+                          {sortField === 'staffName' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'prefecture') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('prefecture');
+                            setSortDirection('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          都道府県
+                          {sortField === 'prefecture' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'rank') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('rank');
+                            setSortDirection('desc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          ランク
+                          {sortField === 'rank' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'judgment') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('judgment');
+                            setSortDirection('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          判定
+                          {sortField === 'judgment' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'environment') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('environment');
+                            setSortDirection('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          環境
+                          {sortField === 'environment' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'registerCount') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('registerCount');
+                            setSortDirection('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          レジ台数
+                          {sortField === 'registerCount' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
+                          if (sortField === 'trafficCount') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('trafficCount');
+                            setSortDirection('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          通行量
+                          {sortField === 'trafficCount' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredVisits.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="px-4 py-8 text-center text-slate-400">
+                          該当する記録がありません
+                        </td>
+                      </tr>
+                    ) : (
+                      [...filteredVisits]
+                        .sort((a, b) => {
+                          let aVal: any, bVal: any;
+                          switch (sortField) {
+                            case 'date':
+                              aVal = new Date(a.date).getTime();
+                              bVal = new Date(b.date).getTime();
+                              break;
+                            case 'facilityName':
+                              aVal = a.facilityName || '';
+                              bVal = b.facilityName || '';
+                              break;
+                            case 'rank':
+                              const rankOrder = { S: 4, A: 3, B: 2, C: 1 };
+                              aVal = rankOrder[a.rank] || 0;
+                              bVal = rankOrder[b.rank] || 0;
+                              break;
+                            case 'judgment':
+                              const judgmentOrder = { approved: 4, negotiating: 3, pending: 2, rejected: 1 };
+                              aVal = judgmentOrder[a.judgment] || 0;
+                              bVal = judgmentOrder[b.judgment] || 0;
+                              break;
+                            case 'staffName':
+                              aVal = (a.staffName || '').toLowerCase();
+                              bVal = (b.staffName || '').toLowerCase();
+                              break;
+                            case 'prefecture':
+                              aVal = (a.prefecture || '').toLowerCase();
+                              bVal = (b.prefecture || '').toLowerCase();
+                              break;
+                            case 'environment':
+                              const envOrder = { '屋内': 3, '半屋内': 2, '屋外': 1 };
+                              aVal = envOrder[a.environment as keyof typeof envOrder] || 0;
+                              bVal = envOrder[b.environment as keyof typeof envOrder] || 0;
+                              break;
+                            case 'registerCount':
+                              const regOrder = { '7台以上': 3, '4-6台': 2, '1-3台': 1 };
+                              aVal = regOrder[a.registerCount as keyof typeof regOrder] || 0;
+                              bVal = regOrder[b.registerCount as keyof typeof regOrder] || 0;
+                              break;
+                            case 'trafficCount':
+                              const trafficOrder = { '多い': 3, '普通': 2, '少ない': 1 };
+                              aVal = trafficOrder[a.trafficCount as keyof typeof trafficOrder] || 0;
+                              bVal = trafficOrder[b.trafficCount as keyof typeof trafficOrder] || 0;
+                              break;
+                            default:
+                              return 0;
+                          }
+                          if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                          if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                          return 0;
+                        })
+                        .map((visit) => (
+                          <tr key={visit.id} className="hover:bg-slate-50 transition">
+                            <td className="px-4 py-3 text-slate-700 font-medium">
+                              {formatDateJP(visit.date)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="font-bold text-slate-800">{visit.facilityName}</div>
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">{visit.staffName}</td>
+                            <td className="px-4 py-3 text-slate-600">{visit.prefecture || '-'}</td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-black text-sm ${
+                                  RANKS[visit.rank].text
+                                } ${RANKS[visit.rank].activeBg} ${RANKS[visit.rank].border}`}
+                              >
+                                {visit.rank}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${
+                                  JUDGMENT[visit.judgment].activeBg
+                                } ${JUDGMENT[visit.judgment].color} ${JUDGMENT[visit.judgment].border}`}
+                              >
+                                <Icon name={JUDGMENT[visit.judgment].icon} size={12} />
+                                {JUDGMENT[visit.judgment].label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-600 text-xs">{visit.environment || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600 text-xs">{visit.registerCount || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600 text-xs">{visit.trafficCount || '-'}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => {
+                                  setSelectedVisit(visit);
+                                  setIsDetailModalOpen(true);
+                                }}
+                                className="text-orange-600 hover:text-orange-700 font-bold text-xs flex items-center gap-1 transition hover:underline"
+                              >
+                                <Icon name="Eye" size={14} />
+                                詳細
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* 詳細モーダル */}
+      {isDetailModalOpen && selectedVisit && (
+        <StoreFormModal
+          initialData={selectedVisit}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedVisit(null);
+          }}
+          onSave={() => {}}
+          loading={false}
+          readOnly={!userIsAdmin}
+          onEdit={userIsAdmin ? () => {
+            setIsDetailModalOpen(false);
+            // 編集モードで開く（親コンポーネントで処理）
+          } : undefined}
+        />
       )}
     </div>
   );
