@@ -3,7 +3,8 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        # キャッシュを活用してビルド時間を短縮
+        - npm ci --prefer-offline --no-audit
     build:
       commands:
         - npm run build

@@ -56,6 +56,7 @@ npm run build
 - **[SUPABASE_AUTH_SETUP.md](./SUPABASE_AUTH_SETUP.md)** - 認証機能の設定
 - **[AWS_DEPLOY.md](./AWS_DEPLOY.md)** - AWS Lambda/API Gatewayのデプロイ
 - **[AWS_AMPLIFY_DEPLOY.md](./AWS_AMPLIFY_DEPLOY.md)** - AWS Amplifyへのデプロイ
+- **[AWS_COST_MANAGEMENT.md](./AWS_COST_MANAGEMENT.md)** - AWS Amplifyのコスト管理と予算設定
 
 主な手順：
 1. Supabaseプロジェクトの作成とマイグレーション実行
