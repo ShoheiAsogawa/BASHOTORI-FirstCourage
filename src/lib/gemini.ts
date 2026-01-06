@@ -63,6 +63,10 @@ export async function callGemini(prompt: string): Promise<string> {
         const apiUrl = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent`;
         console.log(`Trying ${version}/${model}`);
         
+        // タイムアウト付きfetch（50秒）
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 50000);
+        
         const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
           method: 'POST',
           headers: {
@@ -76,7 +80,10 @@ export async function callGemini(prompt: string): Promise<string> {
             ],
             tools: [{ google_search: {} }], // Google検索ツールを有効化
           }),
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errorData = await response.text();
@@ -110,10 +117,37 @@ export async function callGemini(prompt: string): Promise<string> {
           throw new Error(data.error.message || 'Gemini API error');
         }
 
-        const result = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini';
+        // Google検索ツールを使用した場合、複数のレスポンスがある可能性がある
+        let result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        // テキストがない場合、functionCallの結果を確認
+        if (!result && data.candidates?.[0]?.content?.parts) {
+          const parts = data.candidates[0].content.parts;
+          for (const part of parts) {
+            if (part.text) {
+              result = part.text;
+              break;
+            }
+          }
+        }
+        
+        if (!result) {
+          console.warn('No text response, checking for function calls...', data);
+          result = '検索結果を取得できませんでした。もう一度お試しください。';
+        }
+        
         console.log(`✅ Successfully used ${version}/${model}`);
         return result;
       } catch (error) {
+        // タイムアウトエラーの処理
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.error('Request timeout:', error);
+          if (isLast) {
+            throw new Error('検索がタイムアウトしました。時間をおいて再度お試しください。');
+          }
+          continue;
+        }
+        
         // 最後のエンドポイントでも失敗した場合のみエラーをスロー
         if (isLast) {
           console.error('Error calling Gemini API directly:', error);

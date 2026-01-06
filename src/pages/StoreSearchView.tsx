@@ -3,14 +3,13 @@ import { Navbar } from '../components/Navbar';
 import { Icon } from '../components/Icon';
 import { callGemini } from '../lib/gemini';
 import { marked } from 'marked';
-import { checkRateLimit, incrementRequestCount, getRateLimitInfo } from '../lib/rateLimit';
+import { checkRateLimit, incrementRequestCount } from '../lib/rateLimit';
 import { getCurrentLocation, reverseGeocode } from '../lib/location';
 
 export default function StoreSearchView() {
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
-  const [rateLimitInfo, setRateLimitInfo] = useState(getRateLimitInfo());
   const [locationError, setLocationError] = useState<string | null>(null);
 
   // 現在地を取得する関数
@@ -44,7 +43,6 @@ export default function StoreSearchView() {
 
     // リクエストカウントを増やす
     incrementRequestCount();
-    setRateLimitInfo(getRateLimitInfo());
 
     const prompt = `
 あなたは日本の商業施設リサーチャーです。
@@ -82,7 +80,13 @@ export default function StoreSearchView() {
     `;
 
     try {
-      const response = await callGemini(prompt);
+      // タイムアウト処理（60秒）
+      const timeoutPromise = new Promise<string>((_, reject) => {
+        setTimeout(() => reject(new Error('検索がタイムアウトしました。時間をおいて再度お試しください。')), 60000);
+      });
+
+      const responsePromise = callGemini(prompt);
+      const response = await Promise.race([responsePromise, timeoutPromise]);
       setResult(response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '不明なエラー';
@@ -105,17 +109,9 @@ export default function StoreSearchView() {
                 Google検索連動
               </span>
             </h2>
-            <p className="text-sm text-slate-500 mb-4">
+            <p className="text-sm text-slate-500 mb-6">
               地域名を入力すると、AIがGoogle検索を行い、催事に適した商業施設をリストアップします。
-              <span className="block mt-1 text-xs text-orange-600">
-                ⚠️ 実在する店舗情報のみを表示します（1日あたり{rateLimitInfo.limit}回まで）
-              </span>
             </p>
-
-            <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
-              <Icon name="Info" size={14} />
-              <span>残り検索回数: {rateLimitInfo.remaining}回 / {rateLimitInfo.limit}回</span>
-            </div>
 
             <form onSubmit={handleSearch} className="flex flex-col gap-2">
               <div className="flex gap-2">
