@@ -4,28 +4,11 @@ import { Icon } from '../components/Icon';
 import { callGemini } from '../lib/gemini';
 import { marked } from 'marked';
 import { checkRateLimit, incrementRequestCount } from '../lib/rateLimit';
-import { getCurrentLocation, reverseGeocode } from '../lib/location';
-import { addStoreImagesToMarkdown } from '../lib/storeImage';
 
 export default function StoreSearchView() {
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
-  const [locationError, setLocationError] = useState<string | null>(null);
-
-  // 現在地を取得する関数
-  const handleGetCurrentLocation = async () => {
-    setLocationError(null);
-    try {
-      const currentLocation = await getCurrentLocation();
-      const address = await reverseGeocode(currentLocation.latitude, currentLocation.longitude);
-      setLocation(address);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '位置情報の取得に失敗しました';
-      setLocationError(errorMessage);
-      console.error('Location error:', error);
-    }
-  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +23,6 @@ export default function StoreSearchView() {
 
     setLoading(true);
     setResult('');
-    setLocationError(null);
 
     // リクエストカウントを増やす
     incrementRequestCount();
@@ -61,32 +43,23 @@ export default function StoreSearchView() {
    - 正確な住所
    - ジャンル・業種
    - GoogleマップのURL（実在する施設のみ）
-   - **必ず各施設の写真URLを取得してください**（GoogleマップやGoogle検索結果から写真URLを取得）
 
 **出力形式**（マークダウン）:
-各施設について、以下の形式で出力してください。**写真は必ず埋め込み形式（![写真](URL)）で表示してください**：
+各施設について、以下の形式で出力してください：
 
 ### 施設名（実在する施設のみ）
-
-![施設写真](写真の直接URL) <!-- 必ず写真URLを含めてください。Googleマップの写真URL、またはGoogle検索結果から取得した写真URLを使用してください -->
 
 - **ジャンル**: 
 - **住所**: 
 - **Googleマップ**: [地図を見る](https://www.google.com/maps/search/?api=1&query=施設名+住所)
 - **特徴**: (集客力、客層など、実在する情報のみ)
 
-**写真URLの取得方法**:
-- Google検索結果から写真URLを直接取得してください
-- Googleマップの写真URLを使用してください（例: https://maps.googleapis.com/maps/api/place/photo など）
-- 写真URLは必ず直接アクセス可能な形式で提供してください
-- 各施設には必ず写真を含めてください
-
 **注意事項**:
 - 実在しない施設は絶対に含めないでください
 - 推測や創作の情報は含めないでください
 - Google検索で確認できない施設は除外してください
 - 各施設のGoogleマップリンクが正しく動作することを確認してください
-- **写真URLは必ず含めてください。写真がない施設は除外してください**
+- 必ずGoogle検索ツールを使用して、実在する施設のみをリストアップしてください
     `;
 
     try {
@@ -97,10 +70,7 @@ export default function StoreSearchView() {
 
       const responsePromise = callGemini(prompt);
       const response = await Promise.race([responsePromise, timeoutPromise]);
-      
-      // 写真URLがない場合、自動的にGoogleマップの静的画像を追加
-      const responseWithImages = addStoreImagesToMarkdown(response);
-      setResult(responseWithImages);
+      setResult(response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '不明なエラー';
       console.error('店舗検索エラー:', error);
@@ -126,73 +96,37 @@ export default function StoreSearchView() {
               地域名を入力すると、AIがGoogle検索を行い、催事に適した商業施設をリストアップします。
             </p>
 
-            <form onSubmit={handleSearch} className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="例: 大阪府岸和田市、神奈川県横浜市..."
-                  className="flex-1 p-3 bg-slate-50 border border-slate-300 rounded-xl text-base outline-none focus:ring-2 focus:ring-orange-500 transition"
-                />
-                <button
-                  type="button"
-                  onClick={handleGetCurrentLocation}
-                  className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition flex items-center gap-2 text-sm whitespace-nowrap"
-                  title="現在地を取得"
-                >
-                  <Icon name="MapPin" size={18} />
-                  <span className="hidden sm:inline">現在地</span>
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !location || !checkRateLimit().allowed}
-                  className="bg-slate-900 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2 shadow-lg w-32 justify-center whitespace-nowrap text-sm"
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-l-white rounded-full animate-spin" />
-                      <span className="text-xs">検索中</span>
-                    </div>
-                  ) : (
-                    <>
-                      <Icon name="Search" size={18} /> 検索
-                    </>
-                  )}
-                </button>
-              </div>
-              {locationError && (
-                <div className="text-xs text-red-600 bg-red-50 p-2 rounded-lg flex items-center gap-2">
-                  <Icon name="AlertCircle" size={14} />
-                  {locationError}
-                </div>
-              )}
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="例: 大阪府岸和田市、神奈川県横浜市..."
+                className="flex-1 p-3 bg-slate-50 border border-slate-300 rounded-xl text-base outline-none focus:ring-2 focus:ring-orange-500 transition"
+              />
+              <button
+                type="submit"
+                disabled={loading || !location || !checkRateLimit().allowed}
+                className="bg-slate-900 text-white px-4 py-3 rounded-xl font-bold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2 shadow-lg w-32 justify-center whitespace-nowrap text-sm"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-l-white rounded-full animate-spin" />
+                    <span className="text-xs">検索中</span>
+                  </div>
+                ) : (
+                  <>
+                    <Icon name="Search" size={18} /> 検索
+                  </>
+                )}
+              </button>
             </form>
           </div>
 
           {result && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-fade-in">
-              <style>{`
-                .store-search-result img {
-                  display: block;
-                  width: 100%;
-                  max-width: 500px;
-                  height: auto;
-                  margin: 1rem auto;
-                  border-radius: 0.75rem;
-                  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                  object-fit: cover;
-                }
-                .store-search-result h3 {
-                  margin-top: 2rem;
-                  margin-bottom: 1rem;
-                }
-                .store-search-result h3:first-child {
-                  margin-top: 0;
-                }
-              `}</style>
               <div
-                className="store-search-result prose prose-slate max-w-none prose-strong:text-orange-700 prose-headings:text-slate-800 prose-a:text-orange-600 prose-a:font-bold prose-a:no-underline hover:prose-a:underline"
+                className="prose prose-slate max-w-none prose-strong:text-orange-700 prose-headings:text-slate-800 prose-a:text-orange-600 prose-a:font-bold prose-a:no-underline hover:prose-a:underline"
                 dangerouslySetInnerHTML={{ 
                   __html: marked.parse(result, {
                     breaks: true,
