@@ -98,10 +98,10 @@ function App() {
         element={
           user ? (
             <>
-              <Routes>
-                <Route path="/" element={<CalendarView />} />
-                <Route path="/dashboard" element={<DashboardView />} />
-                <Route path="/search" element={<StoreSearchView />} />
+    <Routes>
+      <Route path="/" element={<CalendarView />} />
+      <Route path="/dashboard" element={<DashboardView />} />
+      <Route path="/search" element={<StoreSearchView />} />
               </Routes>
             </>
           ) : (

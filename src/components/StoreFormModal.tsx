@@ -391,7 +391,7 @@ export function StoreFormModal({
                         onClick={() => !readOnly && setFormData({ ...formData, registerCount: count })}
                         disabled={readOnly}
                         className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
-                          formData.registerCount === count
+                        formData.registerCount === count
                             ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
                             : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
                         } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -412,7 +412,7 @@ export function StoreFormModal({
                         onClick={() => !readOnly && setFormData({ ...formData, spaceSize: size })}
                         disabled={readOnly}
                         className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
-                          formData.spaceSize === size
+                        formData.spaceSize === size
                             ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
                             : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
                         } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -449,7 +449,7 @@ export function StoreFormModal({
                         onClick={() => !readOnly && setFormData({ ...formData, trafficCount: level })}
                         disabled={readOnly}
                         className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
-                          formData.trafficCount === level
+                        formData.trafficCount === level
                             ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
                             : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
                         } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -508,7 +508,7 @@ export function StoreFormModal({
                         onClick={() => !readOnly && setFormData({ ...formData, flowLine: rating })}
                         disabled={readOnly}
                         className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${
-                          formData.flowLine === rating
+                        formData.flowLine === rating
                             ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105'
                             : 'bg-white text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 border border-transparent'
                         } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -742,30 +742,30 @@ export function StoreFormModal({
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-3.5 text-slate-600 font-bold bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  onClick={() => formRef.current?.requestSubmit()}
-                  className="flex-[2] py-3.5 bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-l-white rounded-full animate-spin" />
-                      <span>保存中...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <Icon name="Save" size={18} /> 保存する
-                    </>
-                  )}
-                </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3.5 text-slate-600 font-bold bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              onClick={() => formRef.current?.requestSubmit()}
+              className="flex-[2] py-3.5 bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-l-white rounded-full animate-spin" />
+                  <span>保存中...</span>
+                </div>
+              ) : (
+                <>
+                  <Icon name="Save" size={18} /> 保存する
+                </>
+              )}
+            </button>
               </>
             )}
           </div>
