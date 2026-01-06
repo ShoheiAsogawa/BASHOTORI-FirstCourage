@@ -36,6 +36,8 @@ interface DashboardProps {
   onFilterSpaceSizeChange: (spaceSize: string) => void;
   filterCompetitors: string;
   onFilterCompetitorsChange: (competitors: string) => void;
+  filterMonth: string;
+  onFilterMonthChange: (month: string) => void;
   filteredVisits: StoreVisit[];
 }
 
@@ -68,6 +70,8 @@ export function Dashboard({
   onFilterSpaceSizeChange,
   filterCompetitors,
   onFilterCompetitorsChange,
+  filterMonth,
+  onFilterMonthChange,
   filteredVisits,
 }: DashboardProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -87,27 +91,29 @@ export function Dashboard({
   };
 
   const stats = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+    // currentDateがnullの場合は全期間、そうでない場合は指定された月
+    const isAllPeriod = !currentDate;
+    const year = isAllPeriod ? new Date().getFullYear() : currentDate.getFullYear();
+    const month = isAllPeriod ? new Date().getMonth() : currentDate.getMonth();
 
-    const yearVisits = visits.filter((v) => new Date(v.date).getFullYear() === year);
+    const yearVisits = isAllPeriod ? visits : visits.filter((v) => new Date(v.date).getFullYear() === year);
     const yearTotal = yearVisits.length;
     const yearHot = yearVisits.filter((v) =>
       ['S', 'A'].includes(v.rank) && ['approved', 'negotiating'].includes(v.judgment)
     ).length;
 
-    const monthVisits = yearVisits.filter((v) => new Date(v.date).getMonth() === month);
+    const monthVisits = isAllPeriod ? visits : yearVisits.filter((v) => new Date(v.date).getMonth() === month);
     const monthTotal = monthVisits.length;
     const monthHot = monthVisits.filter((v) =>
       ['S', 'A'].includes(v.rank) && ['approved', 'negotiating'].includes(v.judgment)
     ).length;
 
-    const prevMonthDate = new Date(year, month - 1, 1);
-    const prevMonthVisits = visits.filter((v) => {
+    const prevMonthDate = isAllPeriod ? null : new Date(year, month - 1, 1);
+    const prevMonthVisits = isAllPeriod ? [] : visits.filter((v) => {
       const d = new Date(v.date);
-      return d.getFullYear() === prevMonthDate.getFullYear() && d.getMonth() === prevMonthDate.getMonth();
+      return d.getFullYear() === prevMonthDate!.getFullYear() && d.getMonth() === prevMonthDate!.getMonth();
     });
-    const monthDiff = monthTotal - prevMonthVisits.length;
+    const monthDiff = isAllPeriod ? 0 : monthTotal - prevMonthVisits.length;
     const diffSign = monthDiff > 0 ? '+' : '';
 
     const byRank: Record<string, number> = { S: 0, A: 0, B: 0, C: 0 };
@@ -156,6 +162,7 @@ export function Dashboard({
     const activeDeals = byJudgment.approved + byJudgment.negotiating;
 
     return {
+      isAllPeriod,
       year,
       month: month + 1,
       yearTotal,
@@ -206,25 +213,59 @@ export function Dashboard({
             <div className="p-3 bg-blue-50 rounded-xl text-blue-600">
               <Icon name="Calendar" size={24} />
             </div>
-            <div>
-              <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                {stats.month}月 月間実績
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                  {stats.isAllPeriod ? '全期間' : `${stats.month}月`} 実績
+                </div>
+                <select
+                  value={stats.isAllPeriod ? 'ALL' : `${stats.year}-${String(stats.month).padStart(2, '0')}`}
+                  onChange={(e) => {
+                    if (e.target.value === 'ALL') {
+                      onDateChange(null as any);
+                    } else {
+                      const [y, m] = e.target.value.split('-').map(Number);
+                      onDateChange(new Date(y, m - 1, 1));
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs px-2 py-1 bg-white border border-slate-200 rounded text-slate-700 font-bold focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                >
+                  <option value="ALL">指定なし（全期間）</option>
+                  {(() => {
+                    const options = [];
+                    const now = new Date();
+                    for (let i = 11; i >= 0; i--) {
+                      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                      const label = `${date.getFullYear()}年${date.getMonth() + 1}月`;
+                      options.push(
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      );
+                    }
+                    return options;
+                  })()}
+                </select>
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-black text-slate-800">
                   {stats.monthTotal}
                   <span className="text-sm font-normal text-slate-400 ml-1">件</span>
                 </span>
-                <span
-                  className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                    stats.monthDiff >= 0
-                      ? 'text-emerald-600 bg-emerald-50'
-                      : 'text-red-500 bg-red-50'
-                  }`}
-                >
-                  前月比 {stats.diffSign}
-                  {stats.monthDiff}件
-                </span>
+                {!stats.isAllPeriod && (
+                  <span
+                    className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                      stats.monthDiff >= 0
+                        ? 'text-emerald-600 bg-emerald-50'
+                        : 'text-red-500 bg-red-50'
+                    }`}
+                  >
+                    前月比 {stats.diffSign}
+                    {stats.monthDiff}件
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -327,7 +368,7 @@ export function Dashboard({
             </div>
             <div>
               <h5 className="text-xs font-bold text-slate-400 uppercase mb-3">
-                {stats.month}月 判定状況
+                {stats.isAllPeriod ? '全期間' : `${stats.month}月`} 判定状況
               </h5>
               <div className="space-y-3">
                 <div className="flex h-4 rounded-full overflow-hidden bg-slate-200">
@@ -441,17 +482,15 @@ export function Dashboard({
               <Icon name="Filter" size={14} /> 検索・フィルタリング
             </h5>
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
-              {/* 月選択 */}
+              {/* 月選択（検索用） */}
               <div className="flex items-center gap-2 pb-3 border-b border-slate-200">
-                <label className="text-xs font-bold text-slate-600 whitespace-nowrap">表示月:</label>
+                <label className="text-xs font-bold text-slate-600 whitespace-nowrap">表示月（検索用）:</label>
                 <select
-                  value={`${stats.year}-${String(stats.month).padStart(2, '0')}`}
-                  onChange={(e) => {
-                    const [y, m] = e.target.value.split('-').map(Number);
-                    onDateChange(new Date(y, m - 1, 1));
-                  }}
+                  value={filterMonth}
+                  onChange={(e) => onFilterMonthChange(e.target.value)}
                   className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
                 >
+                  <option value="ALL">指定なし</option>
                   {(() => {
                     const options = [];
                     const now = new Date();

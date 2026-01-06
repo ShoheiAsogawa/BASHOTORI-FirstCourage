@@ -32,6 +32,8 @@ export default function DashboardView() {
   const [appliedFilterSpaceSize, setAppliedFilterSpaceSize] = useState<string>('ALL');
   const [filterCompetitors, setFilterCompetitors] = useState<string>('ALL');
   const [appliedFilterCompetitors, setAppliedFilterCompetitors] = useState<string>('ALL');
+  const [filterMonth, setFilterMonth] = useState<string>('ALL');
+  const [appliedFilterMonth, setAppliedFilterMonth] = useState<string>('ALL');
 
   useEffect(() => {
     loadData();
@@ -61,6 +63,7 @@ export default function DashboardView() {
     setAppliedFilterStaffCount(filterStaffCount);
     setAppliedFilterSpaceSize(filterSpaceSize);
     setAppliedFilterCompetitors(filterCompetitors);
+    setAppliedFilterMonth(filterMonth);
   };
 
   const filteredVisits = useMemo(() => {
@@ -79,14 +82,20 @@ export default function DashboardView() {
       const matchesStaffCount = appliedFilterStaffCount === 'ALL' || v.staffCount === appliedFilterStaffCount;
       const matchesSpaceSize = appliedFilterSpaceSize === 'ALL' || v.spaceSize === appliedFilterSpaceSize;
       const matchesCompetitors = appliedFilterCompetitors === 'ALL' || v.competitors === appliedFilterCompetitors;
+      const matchesMonth = appliedFilterMonth === 'ALL' || (() => {
+        if (appliedFilterMonth === 'NONE') return false;
+        const [y, m] = appliedFilterMonth.split('-').map(Number);
+        const visitDate = new Date(v.date);
+        return visitDate.getFullYear() === y && visitDate.getMonth() + 1 === m;
+      })();
       return matchesSearch && matchesRank && matchesJudgment && matchesPrefecture && 
              matchesEnvironment && matchesRegisterCount && matchesTrafficCount && 
              matchesSeasonality && matchesBusyDay && matchesStaffCount && 
-             matchesSpaceSize && matchesCompetitors;
+             matchesSpaceSize && matchesCompetitors && matchesMonth;
     });
   }, [visits, appliedSearchTerm, appliedFilterRank, appliedFilterJudgment, appliedFilterPrefecture, 
       appliedFilterEnvironment, appliedFilterRegisterCount, appliedFilterTrafficCount, 
-      appliedFilterSeasonality, appliedFilterBusyDay, appliedFilterStaffCount, appliedFilterSpaceSize, appliedFilterCompetitors]);
+      appliedFilterSeasonality, appliedFilterBusyDay, appliedFilterStaffCount, appliedFilterSpaceSize, appliedFilterCompetitors, appliedFilterMonth]);
 
   if (loading) {
     return (
@@ -135,6 +144,8 @@ export default function DashboardView() {
             onFilterSpaceSizeChange={setFilterSpaceSize}
             filterCompetitors={filterCompetitors}
             onFilterCompetitorsChange={setFilterCompetitors}
+            filterMonth={filterMonth}
+            onFilterMonthChange={setFilterMonth}
             filteredVisits={filteredVisits}
           />
         </div>
