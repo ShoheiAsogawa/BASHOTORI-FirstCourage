@@ -89,9 +89,9 @@ export default function StoreSearchView() {
     `;
 
     try {
-      // タイムアウト処理（60秒）
+      // タイムアウト処理（100秒 - google_searchツール使用時は時間がかかるため）
       const timeoutPromise = new Promise<string>((_, reject) => {
-        setTimeout(() => reject(new Error('検索がタイムアウトしました。時間をおいて再度お試しください。')), 60000);
+        setTimeout(() => reject(new Error('検索がタイムアウトしました。時間をおいて再度お試しください。')), 100000);
       });
 
       const responsePromise = callGemini(prompt);

@@ -63,9 +63,9 @@ export async function callGemini(prompt: string): Promise<string> {
         const apiUrl = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent`;
         console.log(`Trying ${version}/${model}`);
         
-        // タイムアウト付きfetch（50秒）
+        // タイムアウト付きfetch（90秒 - google_searchツール使用時は時間がかかるため）
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 50000);
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
         
         const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
           method: 'POST',
@@ -88,14 +88,24 @@ export async function callGemini(prompt: string): Promise<string> {
         if (!response.ok) {
           const errorData = await response.text();
           let errorMessage = `Gemini API request failed: ${response.status}`;
-          try {
-            const errorJson = JSON.parse(errorData);
-            console.error(`${version}/${model} error:`, errorJson);
-            if (errorJson.error) {
-              errorMessage = errorJson.error.message || errorMessage;
+          
+          // 429エラー（レート制限）の場合は次のエンドポイントを試す
+          if (response.status === 429) {
+            console.warn(`${version}/${model} rate limited (429), trying next...`);
+            if (!isLast) {
+              continue;
             }
-          } catch (e) {
-            console.error('Gemini API error (raw):', errorData);
+            errorMessage = 'APIレート制限に達しました。しばらく時間をおいて再度お試しください。';
+          } else {
+            try {
+              const errorJson = JSON.parse(errorData);
+              console.error(`${version}/${model} error:`, errorJson);
+              if (errorJson.error) {
+                errorMessage = errorJson.error.message || errorMessage;
+              }
+            } catch (e) {
+              console.error('Gemini API error (raw):', errorData);
+            }
           }
           
           // 最後のエンドポイントでない場合は次を試す
