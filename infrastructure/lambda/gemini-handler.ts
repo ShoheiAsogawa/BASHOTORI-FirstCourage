@@ -56,7 +56,7 @@ export const handler = async (
             parts: [{ text: prompt }],
           },
         ],
-        tools: [{ google_search: {} }],
+        tools: [{ google_search: {} }], // Google検索ツールを有効化（実在する店舗情報を取得）
       }),
     });
 

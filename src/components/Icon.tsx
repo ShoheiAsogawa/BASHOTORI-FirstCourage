@@ -3,7 +3,8 @@ import {
   CheckCircle2, Users, BadgeJapaneseYen, Sparkles, Save, Building,
   Footprints, Eye, Briefcase, Filter, ChevronDown, ChevronUp,
   Edit, Check, Compass, ExternalLink, Store, TrendingUp, Lightbulb,
-  Camera, Image, Trash2, Maximize, AlertTriangle, List, LogOut, User, Lock, FileText
+  Camera, Image, Trash2, Maximize, AlertTriangle, List, LogOut, User, Lock, FileText,
+  Info, AlertCircle
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -43,6 +44,8 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   User,
   Lock,
   FileText,
+  Info,
+  AlertCircle,
 };
 
 interface IconProps {

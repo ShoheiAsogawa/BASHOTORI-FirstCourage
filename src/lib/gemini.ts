@@ -74,6 +74,7 @@ export async function callGemini(prompt: string): Promise<string> {
                 parts: [{ text: prompt }],
               },
             ],
+            tools: [{ google_search: {} }], // Google検索ツールを有効化
           }),
         });
 
