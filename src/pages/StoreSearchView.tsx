@@ -5,6 +5,7 @@ import { callGemini } from '../lib/gemini';
 import { marked } from 'marked';
 import { checkRateLimit, incrementRequestCount } from '../lib/rateLimit';
 import { getCurrentLocation, reverseGeocode } from '../lib/location';
+import { addStoreImagesToMarkdown } from '../lib/storeImage';
 
 export default function StoreSearchView() {
   const [location, setLocation] = useState('');
@@ -96,7 +97,10 @@ export default function StoreSearchView() {
 
       const responsePromise = callGemini(prompt);
       const response = await Promise.race([responsePromise, timeoutPromise]);
-      setResult(response);
+      
+      // 写真URLがない場合、自動的にGoogleマップの静的画像を追加
+      const responseWithImages = addStoreImagesToMarkdown(response);
+      setResult(responseWithImages);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '不明なエラー';
       console.error('店舗検索エラー:', error);
