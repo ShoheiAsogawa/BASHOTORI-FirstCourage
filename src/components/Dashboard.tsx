@@ -10,6 +10,7 @@ import type { StoreVisit } from '../types';
 interface DashboardProps {
   visits: StoreVisit[];
   currentDate: Date;
+  onDateChange: (date: Date) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onSearch: () => void;
@@ -41,6 +42,7 @@ interface DashboardProps {
 export function Dashboard({
   visits,
   currentDate,
+  onDateChange,
   searchTerm,
   onSearchChange,
   onSearch,
@@ -122,10 +124,51 @@ export function Dashboard({
       if (byJudgment[v.judgment] !== undefined) byJudgment[v.judgment]++;
     });
 
-    // 成功率計算
-    const successRate = monthTotal > 0 
-      ? ((byJudgment.approved + byJudgment.negotiating) / monthTotal * 100).toFixed(1)
-      : '0.0';
+    // 都道府県別の集計
+    const byPrefecture: Record<string, number> = {};
+    monthVisits.forEach((v) => {
+      if (v.prefecture) {
+        byPrefecture[v.prefecture] = (byPrefecture[v.prefecture] || 0) + 1;
+      }
+    });
+    const topPrefectures = Object.entries(byPrefecture)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+
+    // 環境別の集計
+    const byEnvironment: Record<string, number> = { '屋内': 0, '半屋内': 0, '屋外': 0 };
+    monthVisits.forEach((v) => {
+      if (v.environment && byEnvironment[v.environment] !== undefined) {
+        byEnvironment[v.environment]++;
+      }
+    });
+
+    // 通行量の集計
+    const byTraffic: Record<string, number> = { '多い': 0, '普通': 0, '少ない': 0 };
+    monthVisits.forEach((v) => {
+      if (v.trafficCount && byTraffic[v.trafficCount] !== undefined) {
+        byTraffic[v.trafficCount]++;
+      }
+    });
+    const highTrafficCount = byTraffic['多い'];
+    const highTrafficRate = monthTotal > 0 ? ((highTrafficCount / monthTotal) * 100).toFixed(1) : '0.0';
+
+    // 過去6ヶ月の視察件数推移
+    const monthlyTrend: { month: string; count: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(year, month - i, 1);
+      const targetVisits = visits.filter((v) => {
+        const d = new Date(v.date);
+        return d.getFullYear() === targetDate.getFullYear() && d.getMonth() === targetDate.getMonth();
+      });
+      monthlyTrend.push({
+        month: `${targetDate.getFullYear()}年${targetDate.getMonth() + 1}月`,
+        count: targetVisits.length,
+      });
+    }
+
+    // 交渉中・出店可の件数
+    const activeDeals = byJudgment.approved + byJudgment.negotiating;
 
     return {
       year,
@@ -138,7 +181,12 @@ export function Dashboard({
       diffSign,
       byRank,
       byJudgment,
-      successRate,
+      topPrefectures,
+      byEnvironment,
+      highTrafficCount,
+      highTrafficRate,
+      monthlyTrend,
+      activeDeals,
     };
   }, [visits, currentDate]);
 
@@ -175,11 +223,36 @@ export function Dashboard({
             <div className="p-3 bg-blue-50 rounded-xl text-blue-600">
               <Icon name="Calendar" size={24} />
             </div>
-            <div>
+            <div className="flex-1">
               <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                {stats.month}月 月間実績
+                月間実績
               </div>
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-center gap-2">
+                <select
+                  value={`${stats.year}-${String(stats.month).padStart(2, '0')}`}
+                  onChange={(e) => {
+                    const [y, m] = e.target.value.split('-').map(Number);
+                    onDateChange(new Date(y, m - 1, 1));
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-2xl font-black text-slate-800 bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {(() => {
+                    const options = [];
+                    const now = new Date();
+                    for (let i = 11; i >= 0; i--) {
+                      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                      const label = `${date.getFullYear()}年${date.getMonth() + 1}月`;
+                      options.push(
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      );
+                    }
+                    return options;
+                  })()}
+                </select>
                 <span className="text-2xl font-black text-slate-800">
                   {stats.monthTotal}
                   <span className="text-sm font-normal text-slate-400 ml-1">件</span>
@@ -206,13 +279,13 @@ export function Dashboard({
 
       {isOpen && (
         <div className="px-6 pb-6 pt-4 border-t border-slate-100 bg-slate-50/50 animate-fade-in">
-          {/* 追加統計情報 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* 事業指標 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-              <div className="text-xs font-bold text-slate-400 uppercase mb-2">成功率</div>
-              <div className="text-3xl font-black text-slate-800">{stats.successRate}%</div>
+              <div className="text-xs font-bold text-slate-400 uppercase mb-2">交渉中・出店可</div>
+              <div className="text-3xl font-black text-slate-800">{stats.activeDeals}</div>
               <div className="text-xs text-slate-500 mt-1">
-                出店可・交渉中: {stats.byJudgment.approved + stats.byJudgment.negotiating}件
+                件（出店可: {stats.byJudgment.approved}件 / 交渉中: {stats.byJudgment.negotiating}件）
               </div>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
@@ -220,6 +293,85 @@ export function Dashboard({
               <div className="text-3xl font-black text-slate-800">{stats.monthHot}</div>
               <div className="text-xs text-slate-500 mt-1">
                 月間 {stats.monthTotal > 0 ? ((stats.monthHot / stats.monthTotal) * 100).toFixed(1) : 0}%
+              </div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+              <div className="text-xs font-bold text-slate-400 uppercase mb-2">通行量が多い店舗</div>
+              <div className="text-3xl font-black text-slate-800">{stats.highTrafficCount}</div>
+              <div className="text-xs text-slate-500 mt-1">
+                {stats.highTrafficRate}% / 月間
+              </div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+              <div className="text-xs font-bold text-slate-400 uppercase mb-2">屋内環境</div>
+              <div className="text-3xl font-black text-slate-800">{stats.byEnvironment['屋内']}</div>
+              <div className="text-xs text-slate-500 mt-1">
+                件（半屋内: {stats.byEnvironment['半屋内']} / 屋外: {stats.byEnvironment['屋外']}）
+              </div>
+            </div>
+          </div>
+
+          {/* 都道府県別・月次推移 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+              <h5 className="text-xs font-bold text-slate-400 uppercase mb-3">
+                都道府県別 視察件数（トップ5）
+              </h5>
+              <div className="space-y-2">
+                {stats.topPrefectures.length > 0 ? (
+                  stats.topPrefectures.map(([pref, count], idx) => {
+                    const maxCount = stats.topPrefectures[0][1];
+                    const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                    return (
+                      <div key={pref} className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 min-w-[80px]">
+                          <span className="text-xs font-bold text-slate-400 w-6 text-center">#{idx + 1}</span>
+                          <span className="text-sm font-bold text-slate-700">{pref}</span>
+                        </div>
+                        <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
+                          <div
+                            className="bg-orange-500 h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                            style={{ width: `${percentage}%` }}
+                          >
+                            <span className="text-xs font-black text-white">{count}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-sm text-slate-400 text-center py-4">データがありません</div>
+                )}
+              </div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+              <h5 className="text-xs font-bold text-slate-400 uppercase mb-3">
+                過去6ヶ月の視察件数推移
+              </h5>
+              <div className="space-y-2">
+                {stats.monthlyTrend.length > 0 ? (
+                  stats.monthlyTrend.map(({ month, count }) => {
+                    const maxCount = Math.max(...stats.monthlyTrend.map((t) => t.count), 1);
+                    const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                    return (
+                      <div key={month} className="flex items-center gap-3">
+                        <div className="min-w-[100px]">
+                          <span className="text-xs font-bold text-slate-600">{month}</span>
+                        </div>
+                        <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
+                          <div
+                            className="bg-blue-500 h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                            style={{ width: `${percentage}%` }}
+                          >
+                            <span className="text-xs font-black text-white">{count}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-sm text-slate-400 text-center py-4">データがありません</div>
+                )}
               </div>
             </div>
           </div>

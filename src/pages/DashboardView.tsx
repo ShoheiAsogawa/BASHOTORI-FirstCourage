@@ -7,7 +7,7 @@ import type { StoreVisit } from '../types';
 export default function DashboardView() {
   const [visits, setVisits] = useState<StoreVisit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [filterRank, setFilterRank] = useState<string>('ALL');
@@ -109,6 +109,7 @@ export default function DashboardView() {
           <Dashboard
             visits={visits}
             currentDate={currentDate}
+            onDateChange={setCurrentDate}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             onSearch={handleSearch}
