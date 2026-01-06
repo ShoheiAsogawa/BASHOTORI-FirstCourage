@@ -60,23 +60,32 @@ export default function StoreSearchView() {
    - 正確な住所
    - ジャンル・業種
    - GoogleマップのURL（実在する施設のみ）
-   - 写真がある場合は、Googleマップの写真URLも含めてください
+   - **必ず各施設の写真URLを取得してください**（GoogleマップやGoogle検索結果から写真URLを取得）
 
 **出力形式**（マークダウン）:
-各施設について、以下の形式で出力してください：
+各施設について、以下の形式で出力してください。**写真は必ず埋め込み形式（![写真](URL)）で表示してください**：
 
 ### 施設名（実在する施設のみ）
-![写真](Googleマップの写真URL) <!-- 写真がある場合のみ -->
+
+![施設写真](写真の直接URL) <!-- 必ず写真URLを含めてください。Googleマップの写真URL、またはGoogle検索結果から取得した写真URLを使用してください -->
+
 - **ジャンル**: 
 - **住所**: 
 - **Googleマップ**: [地図を見る](https://www.google.com/maps/search/?api=1&query=施設名+住所)
 - **特徴**: (集客力、客層など、実在する情報のみ)
+
+**写真URLの取得方法**:
+- Google検索結果から写真URLを直接取得してください
+- Googleマップの写真URLを使用してください（例: https://maps.googleapis.com/maps/api/place/photo など）
+- 写真URLは必ず直接アクセス可能な形式で提供してください
+- 各施設には必ず写真を含めてください
 
 **注意事項**:
 - 実在しない施設は絶対に含めないでください
 - 推測や創作の情報は含めないでください
 - Google検索で確認できない施設は除外してください
 - 各施設のGoogleマップリンクが正しく動作することを確認してください
+- **写真URLは必ず含めてください。写真がない施設は除外してください**
     `;
 
     try {
@@ -159,9 +168,33 @@ export default function StoreSearchView() {
 
           {result && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-fade-in">
+              <style>{`
+                .store-search-result img {
+                  display: block;
+                  width: 100%;
+                  max-width: 500px;
+                  height: auto;
+                  margin: 1rem auto;
+                  border-radius: 0.75rem;
+                  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                  object-fit: cover;
+                }
+                .store-search-result h3 {
+                  margin-top: 2rem;
+                  margin-bottom: 1rem;
+                }
+                .store-search-result h3:first-child {
+                  margin-top: 0;
+                }
+              `}</style>
               <div
-                className="prose prose-slate max-w-none prose-strong:text-orange-700 prose-headings:text-slate-800 prose-a:text-orange-600 prose-a:font-bold prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-img:shadow-md prose-img:my-4"
-                dangerouslySetInnerHTML={{ __html: marked.parse(result) }}
+                className="store-search-result prose prose-slate max-w-none prose-strong:text-orange-700 prose-headings:text-slate-800 prose-a:text-orange-600 prose-a:font-bold prose-a:no-underline hover:prose-a:underline"
+                dangerouslySetInnerHTML={{ 
+                  __html: marked.parse(result, {
+                    breaks: true,
+                    gfm: true,
+                  })
+                }}
               />
             </div>
           )}
