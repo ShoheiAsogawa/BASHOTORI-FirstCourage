@@ -5,12 +5,12 @@
 画像から確認できる設定：
 
 ### ✅ 正しく設定されているもの
-- **VITE_SUPABASE_URL**: `https://nfxzluqlprkelwociuaa.supabase.co` ✓
+- **VITE_SUPABASE_URL**: `https://xxxxx.supabase.co` ✓
 
 ### ⚠️ 修正が必要なもの
 
 #### 1. VITE_SUPABASE_ANON_KEY
-**現在の値**: `sb_secret_J555RrYgEW0F5qFEr2XUGA_d6B9MAS8`
+**現在の値**: `sb_secret_xxxxx`（例）
 
 **問題点**: 
 - `sb_secret_`で始まっているため、これは`service_role`キーの可能性があります
@@ -24,7 +24,8 @@
 **⚠️ 重要**: `service_role`キーは**絶対に**フロントエンドで使用しないでください。サーバーサイド専用です。
 
 #### 2. VITE_GEMINI_API_KEY
-**現在の値**: `AlzaSyB9bNiU-XMW1JahXzrc2jRh5irNKPAeUoU`
+**現在の値**: `AlzaSyxxxxx`（例）
+
 
 **問題点**:
 - 正しい形式は`AIzaSy...`で始まるはずです（最初の`A`が欠けている可能性）
@@ -65,9 +66,9 @@
 
 | 変数名 | 正しい形式 | 例 |
 |--------|-----------|-----|
-| `VITE_SUPABASE_URL` | `https://xxxxx.supabase.co` | `https://nfxzluqlprkelwociuaa.supabase.co` ✓ |
+| `VITE_SUPABASE_URL` | `https://xxxxx.supabase.co` | `https://xxxxx.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | JWTトークン形式（長い文字列） |
-| `VITE_GEMINI_API_KEY` | `AIzaSy...` | `AIzaSyB9bNiU-XMW1JahXzrc2jRh5irNKPAeUoU` |
+| `VITE_GEMINI_API_KEY` | `AIzaSy...` | `AIzaSyxxxxx`（例） |
 | `VITE_AWS_API_GATEWAY_URL` | `https://xxxxx.execute-api.ap-northeast-1.amazonaws.com/prod` | （オプション） |
 
 ## 確認方法
