@@ -128,10 +128,17 @@ export default function StoreSearchView() {
               <div
                 className="prose prose-slate max-w-none prose-strong:text-orange-700 prose-headings:text-slate-800 prose-a:text-orange-600 prose-a:font-bold prose-a:no-underline hover:prose-a:underline"
                 dangerouslySetInnerHTML={{ 
-                  __html: marked.parse(result, {
-                    breaks: true,
-                    gfm: true,
-                  })
+                  __html: (() => {
+                    const renderer = new marked.Renderer();
+                    renderer.link = (href: string, title: string | null | undefined, text: string) => {
+                      return `<a href="${href}"${title ? ` title="${title}"` : ''} target="_blank" rel="noopener noreferrer">${text}</a>`;
+                    };
+                    return marked.parse(result, {
+                      breaks: true,
+                      gfm: true,
+                      renderer,
+                    });
+                  })()
                 }}
               />
             </div>
