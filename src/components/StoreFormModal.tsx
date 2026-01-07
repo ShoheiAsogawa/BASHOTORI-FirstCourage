@@ -51,7 +51,7 @@ export function StoreFormModal({
     staffName: initialData?.staffName || '',
     prefecture: initialData?.prefecture || '',
     rank: initialData?.rank || 'B',
-    judgment: initialData?.judgment || 'pending',
+    judgment: initialData?.judgment || 'B',
     environment: initialData?.environment || '屋内',
     imitationTable: initialData?.imitationTable || '設置可',
     registerCount: initialData?.registerCount || '',
@@ -697,21 +697,27 @@ export function StoreFormModal({
                 <input type="hidden" name="rank" value={formData.rank} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-600 mb-2">出店可否ジャッジ</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="block text-xs font-bold text-slate-600 mb-2">最終判定</label>
+                <div className="grid grid-cols-5 gap-2">
                   {Object.entries(JUDGMENT).map(([k, v]) => (
                     <button
                       key={k}
                       type="button"
                       onClick={() => !readOnly && setFormData({ ...formData, judgment: k as any })}
                       disabled={readOnly}
-                      className={`py-2 px-3 rounded-lg border transition text-xs font-bold flex items-center justify-center gap-2 ${
+                      className={`relative py-3 rounded-xl border transition flex flex-col items-center justify-center ${
                         formData.judgment === k
-                          ? `${v.activeBg} ${v.border} ${v.color} shadow-md`
+                          ? `${v.activeBg} ${v.border} ${v.color} shadow-md scale-105 z-10`
                           : `bg-white ${v.border} text-slate-500 ${v.hoverBg}`
                       } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
-                      <Icon name={v.icon} size={14} /> {v.label}
+                      <span className="text-lg font-black leading-none">{k}</span>
+                      <span className="text-[9px] font-bold opacity-80 mt-0.5">
+                        {k === 'S' ? '超優良' : k === 'A' ? '期待大' : k === 'B' ? '標準' : k === 'C' ? '検討' : '厳しい'}
+                      </span>
+                      {formData.judgment === k && (
+                        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${v.dot}`} />
+                      )}
                     </button>
                   ))}
                 </div>

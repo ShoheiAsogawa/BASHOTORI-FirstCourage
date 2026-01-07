@@ -128,10 +128,11 @@ export default function CalendarView() {
                     className="bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 font-bold text-slate-600 min-w-[100px]"
                   >
                     <option value="ALL">全判定</option>
-                    <option value="pending">調査中</option>
-                    <option value="negotiating">交渉中</option>
-                    <option value="approved">出店可</option>
-                    <option value="rejected">不可/NG</option>
+                    <option value="S">S（超優良）</option>
+                    <option value="A">A（期待大）</option>
+                    <option value="B">B（標準）</option>
+                    <option value="C">C（検討）</option>
+                    <option value="D">D（厳しい）</option>
                   </select>
                 </div>
               </div>

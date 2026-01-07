@@ -48,35 +48,44 @@ export const RANKS: Record<string, RankInfo> = {
 };
 
 export const JUDGMENT: Record<string, JudgmentInfo> = {
-  pending: {
-    label: '調査中',
-    color: 'text-slate-500 bg-slate-100',
-    icon: 'Eye',
-    border: 'border-slate-200',
-    hoverBg: 'hover:bg-slate-50',
-    activeBg: 'bg-slate-100',
-    dot: 'bg-slate-400',
+  S: {
+    label: 'S（超優良）',
+    color: 'text-orange-600 bg-orange-100',
+    icon: 'Star',
+    border: 'border-orange-200',
+    hoverBg: 'hover:bg-orange-50',
+    activeBg: 'bg-orange-100',
+    dot: 'bg-orange-500',
   },
-  negotiating: {
-    label: '交渉中',
+  A: {
+    label: 'A（期待大）',
+    color: 'text-yellow-600 bg-yellow-100',
+    icon: 'Star',
+    border: 'border-yellow-200',
+    hoverBg: 'hover:bg-yellow-50',
+    activeBg: 'bg-yellow-100',
+    dot: 'bg-yellow-500',
+  },
+  B: {
+    label: 'B（標準）',
     color: 'text-blue-600 bg-blue-100',
-    icon: 'Briefcase',
+    icon: 'Circle',
     border: 'border-blue-200',
     hoverBg: 'hover:bg-blue-50',
     activeBg: 'bg-blue-100',
     dot: 'bg-blue-500',
   },
-  approved: {
-    label: '出店可',
-    color: 'text-emerald-600 bg-emerald-100',
-    icon: 'CheckCircle2',
-    border: 'border-emerald-200',
-    hoverBg: 'hover:bg-emerald-50',
-    activeBg: 'bg-emerald-100',
-    dot: 'bg-emerald-500',
+  C: {
+    label: 'C（検討）',
+    color: 'text-slate-600 bg-slate-100',
+    icon: 'Circle',
+    border: 'border-slate-200',
+    hoverBg: 'hover:bg-slate-50',
+    activeBg: 'bg-slate-100',
+    dot: 'bg-slate-400',
   },
-  rejected: {
-    label: '不可/NG',
+  D: {
+    label: 'D（厳しい）',
     color: 'text-red-600 bg-red-100',
     icon: 'X',
     border: 'border-red-200',

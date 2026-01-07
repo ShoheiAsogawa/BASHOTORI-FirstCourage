@@ -99,13 +99,13 @@ export function Dashboard({
     const yearVisits = isAllPeriod ? visits : visits.filter((v) => new Date(v.date).getFullYear() === year);
     const yearTotal = yearVisits.length;
     const yearHot = yearVisits.filter((v) =>
-      ['S', 'A'].includes(v.rank) && ['approved', 'negotiating'].includes(v.judgment)
+      ['S', 'A'].includes(v.judgment)
     ).length;
 
     const monthVisits = isAllPeriod ? visits : yearVisits.filter((v) => new Date(v.date).getMonth() === month);
     const monthTotal = monthVisits.length;
     const monthHot = monthVisits.filter((v) =>
-      ['S', 'A'].includes(v.rank) && ['approved', 'negotiating'].includes(v.judgment)
+      ['S', 'A'].includes(v.judgment)
     ).length;
 
     const prevMonthDate = isAllPeriod ? null : new Date(year, month - 1, 1);
@@ -121,10 +121,11 @@ export function Dashboard({
       if (byRank[v.rank] !== undefined) byRank[v.rank]++;
     });
     const byJudgment: Record<string, number> = {
-      approved: 0,
-      negotiating: 0,
-      pending: 0,
-      rejected: 0,
+      S: 0,
+      A: 0,
+      B: 0,
+      C: 0,
+      D: 0,
     };
     monthVisits.forEach((v) => {
       if (byJudgment[v.judgment] !== undefined) byJudgment[v.judgment]++;
@@ -149,17 +150,18 @@ export function Dashboard({
 
     // 全期間の判定状況
     const byJudgmentAll: Record<string, number> = {
-      approved: 0,
-      negotiating: 0,
-      pending: 0,
-      rejected: 0,
+      S: 0,
+      A: 0,
+      B: 0,
+      C: 0,
+      D: 0,
     };
     visits.forEach((v) => {
       if (byJudgmentAll[v.judgment] !== undefined) byJudgmentAll[v.judgment]++;
     });
 
-    // 交渉中・出店可の件数
-    const activeDeals = byJudgment.approved + byJudgment.negotiating;
+    // 超優良・期待大の件数
+    const activeDeals = byJudgment.S + byJudgment.A;
 
     return {
       isAllPeriod,
@@ -281,14 +283,14 @@ export function Dashboard({
           {/* 事業指標 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-              <div className="text-xs font-bold text-slate-400 uppercase mb-2">交渉中・出店可</div>
+              <div className="text-xs font-bold text-slate-400 uppercase mb-2">超優良・期待大</div>
               <div className="text-3xl font-black text-slate-800">{stats.activeDeals}</div>
               <div className="text-xs text-slate-500 mt-1">
-                件（出店可: {stats.byJudgment.approved}件 / 交渉中: {stats.byJudgment.negotiating}件）
+                件（S: {stats.byJudgment.S}件 / A: {stats.byJudgment.A}件）
               </div>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-              <div className="text-xs font-bold text-slate-400 uppercase mb-2">S&Aランク</div>
+              <div className="text-xs font-bold text-slate-400 uppercase mb-2">S&A判定</div>
               <div className="text-3xl font-black text-slate-800">{stats.monthHot}</div>
               <div className="text-xs text-slate-500 mt-1">
                 月間 {stats.monthTotal > 0 ? ((stats.monthHot / stats.monthTotal) * 100).toFixed(1) : 0}%
@@ -554,17 +556,18 @@ export function Dashboard({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1.5">判定</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5">最終判定</label>
                     <select
                       value={filterJudgment}
                       onChange={(e) => onFilterJudgmentChange(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-700"
                     >
                       <option value="ALL">全判定</option>
-                      <option value="pending">調査中</option>
-                      <option value="negotiating">交渉中</option>
-                      <option value="approved">出店可</option>
-                      <option value="rejected">不可/NG</option>
+                      <option value="S">S（超優良）</option>
+                      <option value="A">A（期待大）</option>
+                      <option value="B">B（標準）</option>
+                      <option value="C">C（検討）</option>
+                      <option value="D">D（厳しい）</option>
                     </select>
                   </div>
                   <div>
@@ -917,7 +920,7 @@ export function Dashboard({
                               bVal = rankOrder[b.rank] || 0;
                               break;
                             case 'judgment':
-                              const judgmentOrder = { approved: 4, negotiating: 3, pending: 2, rejected: 1 };
+                              const judgmentOrder = { S: 5, A: 4, B: 3, C: 2, D: 1 };
                               aVal = judgmentOrder[a.judgment] || 0;
                               bVal = judgmentOrder[b.judgment] || 0;
                               break;

@@ -1,8 +1,8 @@
 // ランク定義
 export type Rank = 'S' | 'A' | 'B' | 'C';
 
-// 判定ステータス
-export type Judgment = 'pending' | 'negotiating' | 'approved' | 'rejected';
+// 判定ステータス（最終判定）
+export type Judgment = 'S' | 'A' | 'B' | 'C' | 'D';
 
 // 都道府県
 export const PREFECTURES = [
