@@ -976,11 +976,11 @@ export function Dashboard({
                             <td className="px-4 py-3">
                               <span
                                 className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${
-                                  JUDGMENT[visit.judgment].activeBg
-                                } ${JUDGMENT[visit.judgment].color} ${JUDGMENT[visit.judgment].border}`}
+                                  (JUDGMENT[visit.judgment] || JUDGMENT['B']).activeBg
+                                } ${(JUDGMENT[visit.judgment] || JUDGMENT['B']).color} ${(JUDGMENT[visit.judgment] || JUDGMENT['B']).border}`}
                               >
-                                <Icon name={JUDGMENT[visit.judgment].icon} size={12} />
-                                {JUDGMENT[visit.judgment].label}
+                                <Icon name={(JUDGMENT[visit.judgment] || JUDGMENT['B']).icon} size={12} />
+                                {(JUDGMENT[visit.judgment] || JUDGMENT['B']).label}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-slate-600 text-xs">{visit.environment || '-'}</td>

@@ -140,6 +140,22 @@ export async function deleteStoreVisit(id: string): Promise<void> {
   }
 }
 
+// 古い判定値を新しい値に変換
+function normalizeJudgment(judgment: string): 'S' | 'A' | 'B' | 'C' | 'D' {
+  // 既に新しい値の場合はそのまま返す
+  if (['S', 'A', 'B', 'C', 'D'].includes(judgment)) {
+    return judgment as 'S' | 'A' | 'B' | 'C' | 'D';
+  }
+  // 古い値を新しい値に変換
+  const mapping: Record<string, 'S' | 'A' | 'B' | 'C' | 'D'> = {
+    'approved': 'S',
+    'negotiating': 'A',
+    'pending': 'B',
+    'rejected': 'D',
+  };
+  return mapping[judgment] || 'B'; // デフォルトはB
+}
+
 // データベースのスネークケースをキャメルケースに変換
 function transformStoreVisit(row: any): StoreVisit {
   return {
@@ -149,7 +165,7 @@ function transformStoreVisit(row: any): StoreVisit {
     staffName: row.staff_name,
     prefecture: row.prefecture,
     rank: row.rank,
-    judgment: row.judgment,
+    judgment: normalizeJudgment(row.judgment),
     environment: row.environment,
     imitationTable: row.imitation_table,
     registerCount: row.register_count,
