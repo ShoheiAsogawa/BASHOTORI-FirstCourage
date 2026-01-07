@@ -51,7 +51,7 @@ export function StoreFormModal({
     staffName: initialData?.staffName || '',
     prefecture: initialData?.prefecture || '',
     rank: initialData?.rank || 'B',
-    judgment: initialData?.judgment || 'B',
+    judgment: initialData?.judgment || 'pending',
     environment: initialData?.environment || '屋内',
     imitationTable: initialData?.imitationTable || '設置可',
     registerCount: initialData?.registerCount || '',
@@ -673,8 +673,8 @@ export function StoreFormModal({
               </div>
               <div className="mb-6">
                 <label className="block text-xs font-bold text-slate-600 mb-2">ポテンシャルランク</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {Object.keys(RANKS).map((r) => (
+                <div className="grid grid-cols-5 gap-2">
+                  {Object.entries(RANKS).map(([r, info]) => (
                     <button
                       key={r}
                       type="button"
@@ -682,14 +682,14 @@ export function StoreFormModal({
                       disabled={readOnly}
                       className={`relative py-3 rounded-xl border transition flex flex-col items-center justify-center ${
                         formData.rank === r
-                          ? `${RANKS[r].activeBg} ${RANKS[r].border} ${RANKS[r].text} shadow-md scale-105 z-10`
-                          : `bg-white ${RANKS[r].border} text-slate-500 ${RANKS[r].hoverBg}`
+                          ? `${info.activeBg} ${info.border} ${info.text} shadow-md scale-105 z-10`
+                          : `bg-white ${info.border} text-slate-500 ${info.hoverBg}`
                       } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <span className="text-lg font-black leading-none">{r}</span>
-                      <span className="text-[9px] font-bold opacity-80">{RANKS[r].desc}</span>
+                      <span className="text-[9px] font-bold opacity-80">{info.desc}</span>
                       {formData.rank === r && (
-                        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${RANKS[r].dot}`} />
+                        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${info.dot}`} />
                       )}
                     </button>
                   ))}
@@ -697,27 +697,21 @@ export function StoreFormModal({
                 <input type="hidden" name="rank" value={formData.rank} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-600 mb-2">最終判定</label>
-                <div className="grid grid-cols-5 gap-2">
+                <label className="block text-xs font-bold text-slate-600 mb-2">出店可否ジャッジ</label>
+                <div className="grid grid-cols-2 gap-2">
                   {Object.entries(JUDGMENT).map(([k, v]) => (
                     <button
                       key={k}
                       type="button"
                       onClick={() => !readOnly && setFormData({ ...formData, judgment: k as any })}
                       disabled={readOnly}
-                      className={`relative py-3 rounded-xl border transition flex flex-col items-center justify-center ${
+                      className={`py-2 px-3 rounded-lg border transition text-xs font-bold flex items-center justify-center gap-2 ${
                         formData.judgment === k
-                          ? `${v.activeBg} ${v.border} ${v.color} shadow-md scale-105 z-10`
+                          ? `${v.activeBg} ${v.border} ${v.color} shadow-md`
                           : `bg-white ${v.border} text-slate-500 ${v.hoverBg}`
                       } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
-                      <span className="text-lg font-black leading-none">{k}</span>
-                      <span className="text-[9px] font-bold opacity-80 mt-0.5">
-                        {k === 'S' ? '超優良' : k === 'A' ? '期待大' : k === 'B' ? '標準' : k === 'C' ? '検討' : '厳しい'}
-                      </span>
-                      {formData.judgment === k && (
-                        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${v.dot}`} />
-                      )}
+                      <Icon name={v.icon} size={14} /> {v.label}
                     </button>
                   ))}
                 </div>

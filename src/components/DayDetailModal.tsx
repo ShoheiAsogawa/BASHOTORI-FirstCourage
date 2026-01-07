@@ -65,9 +65,9 @@ export function DayDetailModal({
                       {v.rank}ランク
                     </span>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${(JUDGMENT[v.judgment] || JUDGMENT['B']).color}`}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${(JUDGMENT[v.judgment] || JUDGMENT['pending']).color}`}
                     >
-                      {(JUDGMENT[v.judgment] || JUDGMENT['B']).label}
+                      {(JUDGMENT[v.judgment] || JUDGMENT['pending']).label}
                     </span>
                   </div>
                   {onEdit && (
