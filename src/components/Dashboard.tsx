@@ -953,7 +953,23 @@ export function Dashboard({
                           return 0;
                         })
                         .map((visit) => (
-                          <tr key={visit.id} className="hover:bg-slate-50 transition">
+                          <tr
+                            key={visit.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              setSelectedVisit(visit);
+                              setIsDetailModalOpen(true);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setSelectedVisit(visit);
+                                setIsDetailModalOpen(true);
+                              }
+                            }}
+                            className="hover:bg-slate-50 transition cursor-pointer"
+                          >
                             <td className="px-4 py-3 text-slate-700 font-medium">
                               {formatDateJP(visit.date)}
                             </td>
@@ -985,16 +1001,10 @@ export function Dashboard({
                             <td className="px-4 py-3 text-slate-600 text-xs">{visit.registerCount || '-'}</td>
                             <td className="px-4 py-3 text-slate-600 text-xs">{visit.trafficCount || '-'}</td>
                             <td className="px-4 py-3">
-                              <button
-                                onClick={() => {
-                                  setSelectedVisit(visit);
-                                  setIsDetailModalOpen(true);
-                                }}
-                                className="text-orange-600 hover:text-orange-700 font-bold text-xs flex items-center gap-1 transition hover:underline"
-                              >
+                              <span className="text-orange-600 font-bold text-xs flex items-center gap-1">
                                 <Icon name="Eye" size={14} />
                                 詳細
-                              </button>
+                              </span>
                             </td>
                           </tr>
                         ))
