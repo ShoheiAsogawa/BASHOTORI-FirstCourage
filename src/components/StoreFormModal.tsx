@@ -10,10 +10,11 @@ interface StoreFormModalProps {
   initialData?: StoreVisit | null;
   selectedDate?: Date | null;
   onClose: () => void;
-  onSave: (data: Partial<StoreVisit>) => void;
+  onSave: (data: Partial<StoreVisit>) => Promise<StoreVisit>;
   loading: boolean;
   readOnly?: boolean; // 読み取り専用モード
   onEdit?: () => void; // 編集モードに切り替えるコールバック
+  onSaved?: (savedData: StoreVisit) => void; // 保存完了後のコールバック
 }
 
 export function StoreFormModal({
@@ -24,9 +25,12 @@ export function StoreFormModal({
   loading,
   readOnly = false,
   onEdit,
+  onSaved,
 }: StoreFormModalProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   // 初期写真データの処理
   const [initialPhotos] = useState<Photo[]>(() => {
@@ -141,21 +145,40 @@ export function StoreFormModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const submitData = {
-      ...formData,
-      photoUrl: JSON.stringify(formData.photos),
-      prefecture: (formData.prefecture || undefined) as Prefecture | undefined,
-    } as Partial<StoreVisit>;
-    delete (submitData as any).photos;
-    
-    // 新規登録の場合はidを削除（データベースが自動生成するため）
-    if (!initialData) {
-      delete (submitData as any).id;
+    setSaving(true);
+    try {
+      const submitData = {
+        ...formData,
+        photoUrl: JSON.stringify(formData.photos),
+        prefecture: (formData.prefecture || undefined) as Prefecture | undefined,
+      } as Partial<StoreVisit>;
+      delete (submitData as any).photos;
+      
+      // 新規登録の場合はidを削除（データベースが自動生成するため）
+      if (!initialData) {
+        delete (submitData as any).id;
+      }
+      
+      const savedData = await onSave(submitData);
+      
+      // 保存完了のトーストを表示
+      setShowSuccessToast(true);
+      setTimeout(() => {
+        setShowSuccessToast(false);
+      }, 2000);
+      
+      // 保存後のコールバックを呼び出し
+      if (onSaved) {
+        onSaved(savedData);
+      }
+    } catch (error) {
+      console.error('保存エラー:', error);
+      alert('保存エラー: ' + (error as Error).message);
+    } finally {
+      setSaving(false);
     }
-    
-    onSave(submitData);
   };
 
   return (
@@ -190,6 +213,22 @@ export function StoreFormModal({
         <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm text-white animate-fade-in">
           <div className="w-12 h-12 border-4 border-white/30 border-l-orange-500 rounded-full animate-spin mb-4" />
           <p className="font-bold text-lg">画像を圧縮・アップロード中...</p>
+        </div>
+      )}
+
+      {saving && (
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm text-white animate-fade-in">
+          <div className="w-12 h-12 border-4 border-white/30 border-l-orange-500 rounded-full animate-spin mb-4" />
+          <p className="font-bold text-lg">保存中...</p>
+        </div>
+      )}
+
+      {showSuccessToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] animate-fade-in">
+          <div className="bg-slate-800 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2">
+            <Icon name="Check" size={18} className="text-orange-500" />
+            <span className="font-bold text-sm">保存完了</span>
+          </div>
         </div>
       )}
 
@@ -751,11 +790,11 @@ export function StoreFormModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={saving || loading}
               onClick={() => formRef.current?.requestSubmit()}
               className="flex-[2] py-3.5 bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
             >
-              {loading ? (
+              {saving || loading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 border-2 border-white/30 border-l-white rounded-full animate-spin" />
                   <span>保存中...</span>

@@ -50,13 +50,15 @@ export default function DashboardView() {
     }
   };
 
-  const handleSave = async (data: Partial<StoreVisit>) => {
+  const handleSave = async (data: Partial<StoreVisit>): Promise<StoreVisit> => {
     setLoading(true);
     try {
-      await saveStoreVisit(data);
+      const savedData = await saveStoreVisit(data);
       await loadData();
+      return savedData;
     } catch (e) {
       alert('保存エラー: ' + (e as Error).message);
+      throw e;
     } finally {
       setLoading(false);
     }

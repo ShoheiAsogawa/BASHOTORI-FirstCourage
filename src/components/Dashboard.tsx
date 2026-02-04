@@ -39,7 +39,7 @@ interface DashboardProps {
   filterMonth: string;
   onFilterMonthChange: (month: string) => void;
   filteredVisits: StoreVisit[];
-  onSave: (data: Partial<StoreVisit>) => void;
+  onSave: (data: Partial<StoreVisit>) => Promise<StoreVisit>;
   loading: boolean;
 }
 
@@ -1029,17 +1029,17 @@ export function Dashboard({
             setIsDetailModalOpen(false);
             setSelectedVisit(null);
           }}
-          onSave={async (data) => {
-            await onSave(data);
-            setIsDetailModalOpen(false);
-            setSelectedVisit(null);
-          }}
+          onSave={onSave}
           loading={loading}
           readOnly={!userIsAdmin}
           onEdit={userIsAdmin ? () => {
             setIsDetailModalOpen(false);
             // 編集モードで開く（親コンポーネントで処理）
           } : undefined}
+          onSaved={(savedData) => {
+            // 保存後に更新されたデータで表示を更新
+            setSelectedVisit(savedData);
+          }}
         />
       )}
     </div>
