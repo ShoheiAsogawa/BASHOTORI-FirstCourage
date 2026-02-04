@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Dashboard } from '../components/Dashboard';
-import { getStoreVisits } from '../lib/supabase';
+import { getStoreVisits, saveStoreVisit } from '../lib/supabase';
 import type { StoreVisit } from '../types';
 
 export default function DashboardView() {
@@ -45,6 +45,18 @@ export default function DashboardView() {
       setVisits(data);
     } catch (e) {
       console.error('Load Error', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async (data: Partial<StoreVisit>) => {
+    setLoading(true);
+    try {
+      await saveStoreVisit(data);
+      await loadData();
+    } catch (e) {
+      alert('保存エラー: ' + (e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -147,6 +159,8 @@ export default function DashboardView() {
             filterMonth={filterMonth}
             onFilterMonthChange={setFilterMonth}
             filteredVisits={filteredVisits}
+            onSave={handleSave}
+            loading={loading}
           />
         </div>
       </main>

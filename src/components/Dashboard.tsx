@@ -39,6 +39,8 @@ interface DashboardProps {
   filterMonth: string;
   onFilterMonthChange: (month: string) => void;
   filteredVisits: StoreVisit[];
+  onSave: (data: Partial<StoreVisit>) => void;
+  loading: boolean;
 }
 
 export function Dashboard({
@@ -73,6 +75,8 @@ export function Dashboard({
   filterMonth,
   onFilterMonthChange,
   filteredVisits,
+  onSave,
+  loading,
 }: DashboardProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [sortField, setSortField] = useState<'date' | 'facilityName' | 'staffName' | 'prefecture' | 'rank' | 'judgment' | 'environment' | 'registerCount' | 'trafficCount'>('date');
@@ -1025,8 +1029,12 @@ export function Dashboard({
             setIsDetailModalOpen(false);
             setSelectedVisit(null);
           }}
-          onSave={() => {}}
-          loading={false}
+          onSave={async (data) => {
+            await onSave(data);
+            setIsDetailModalOpen(false);
+            setSelectedVisit(null);
+          }}
+          loading={loading}
           readOnly={!userIsAdmin}
           onEdit={userIsAdmin ? () => {
             setIsDetailModalOpen(false);
