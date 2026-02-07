@@ -79,7 +79,7 @@ export function Dashboard({
   loading,
 }: DashboardProps) {
   const [isOpen, setIsOpen] = useState(true);
-  const [sortField, setSortField] = useState<'date' | 'facilityName' | 'staffName' | 'prefecture' | 'rank' | 'judgment' | 'environment' | 'registerCount' | 'trafficCount'>('date');
+  const [sortField, setSortField] = useState<'date' | 'facilityName' | 'staffName' | 'prefecture' | 'rank' | 'judgment' | 'environment' | 'seasonality' | 'registerCount' | 'trafficCount'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedVisit, setSelectedVisit] = useState<StoreVisit | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -860,6 +860,24 @@ export function Dashboard({
                       <th 
                         className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
                         onClick={() => {
+                          if (sortField === 'seasonality') {
+                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortField('seasonality');
+                            setSortDirection('asc');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          季節
+                          {sortField === 'seasonality' && (
+                            <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase cursor-pointer hover:bg-slate-100 transition"
+                        onClick={() => {
                           if (sortField === 'registerCount') {
                             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                           } else {
@@ -899,7 +917,7 @@ export function Dashboard({
                   <tbody className="divide-y divide-slate-100">
                     {filteredVisits.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="px-4 py-8 text-center text-slate-400">
+                        <td colSpan={11} className="px-4 py-8 text-center text-slate-400">
                           該当する記録がありません
                         </td>
                       </tr>
@@ -938,6 +956,11 @@ export function Dashboard({
                               const envOrder = { '屋内': 3, '半屋内': 2, '屋外': 1 };
                               aVal = envOrder[a.environment as keyof typeof envOrder] || 0;
                               bVal = envOrder[b.environment as keyof typeof envOrder] || 0;
+                              break;
+                            case 'seasonality':
+                              const seasonOrder = { 'オールシーズンok': 2, '春秋ならok': 1 };
+                              aVal = seasonOrder[a.seasonality as keyof typeof seasonOrder] || 0;
+                              bVal = seasonOrder[b.seasonality as keyof typeof seasonOrder] || 0;
                               break;
                             case 'registerCount':
                               const regOrder = { '7台以上': 3, '4-6台': 2, '1-3台': 1 };
@@ -1002,6 +1025,9 @@ export function Dashboard({
                               </span>
                             </td>
                             <td className="px-4 py-3 text-slate-600 text-xs">{visit.environment || '-'}</td>
+                            <td className="px-4 py-3 text-slate-600 text-xs">
+                              {visit.seasonality === '春秋ならok' ? '春秋' : visit.seasonality === 'オールシーズンok' ? 'AS' : '-'}
+                            </td>
                             <td className="px-4 py-3 text-slate-600 text-xs">{visit.registerCount || '-'}</td>
                             <td className="px-4 py-3 text-slate-600 text-xs">{visit.trafficCount || '-'}</td>
                             <td className="px-4 py-3">
