@@ -102,10 +102,9 @@
 # https://rtyley.github.io/bfg-repo-cleaner/
 
 # 2. 機密情報を含むファイルをリストアップ
-echo "sb_secret_J555RrYgEW0F5qFEr2XUGA_d6B9MAS8" > secrets.txt
-echo "AlzaSyB9bNiU-XMW1JahXzrc2jRh5irNKPAeUoU" >> secrets.txt
-echo "AIzaSyB9bNiU-XMW1JahXzrc2jRh5irNKPAeUoU" >> secrets.txt
-echo "https://nfxzluqlprkelwociuaa.supabase.co" >> secrets.txt
+echo "sb_secret_xxxxx" > secrets.txt
+echo "AIzaSyxxxxx" >> secrets.txt
+echo "https://xxxxx.supabase.co" >> secrets.txt
 
 # 3. BFGで履歴をクリーンアップ
 java -jar bfg.jar --replace-text secrets.txt
@@ -303,10 +302,9 @@ git push -u origin main
 # https://rtyley.github.io/bfg-repo-cleaner/
 
 # 2. 機密情報を含むファイルをリストアップ
-echo "sb_secret_J555RrYgEW0F5qFEr2XUGA_d6B9MAS8" > secrets.txt
-echo "AlzaSyB9bNiU-XMW1JahXzrc2jRh5irNKPAeUoU" >> secrets.txt
-echo "AIzaSyB9bNiU-XMW1JahXzrc2jRh5irNKPAeUoU" >> secrets.txt
-echo "https://nfxzluqlprkelwociuaa.supabase.co" >> secrets.txt
+echo "sb_secret_xxxxx" > secrets.txt
+echo "AIzaSyxxxxx" >> secrets.txt
+echo "https://xxxxx.supabase.co" >> secrets.txt
 
 # 3. BFGで履歴をクリーンアップ
 java -jar bfg.jar --replace-text secrets.txt
