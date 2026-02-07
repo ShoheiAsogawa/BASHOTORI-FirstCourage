@@ -424,28 +424,24 @@ Lambda関数の「モニタリング」タブで：
 
 ## 8. カスタムドメインの設定
 
-### 8.1 Route 53でドメインを取得
+**bashotori.com など独自ドメインを CloudFront で使う詳細手順は [AWS_CUSTOM_DOMAIN.md](./AWS_CUSTOM_DOMAIN.md) を参照してください。**（ACM 証明書・CloudFront 設定・DNS の流れを記載）
 
-1. [Route 53 Console](https://console.aws.amazon.com/route53/)にアクセス
-2. 「登録済みドメイン」→「ドメインを登録」
-3. 希望のドメイン名を検索して購入
+### 8.1 概要
 
-### 8.2 CloudFrontにカスタムドメインを追加
+- **Route 53 でドメインを取得する場合**: [Route 53 Console](https://console.aws.amazon.com/route53/) → 「登録済みドメイン」→「ドメインを登録」
+- **既存ドメイン（お名前.com 等）を使う場合**: そのまま DNS 管理画面で CNAME / A レコードを設定
 
-1. CloudFrontディストリビューションの「一般」タブ
-2. 「編集」をクリック
-3. 「代替ドメイン名（CNAME）」にドメインを追加
-4. 「SSL証明書」でACM証明書を選択（Route 53で自動リクエスト可能）
+### 8.2 CloudFront にカスタムドメインを追加
 
-### 8.3 Route 53でDNSレコードを作成
+1. **ACM（us-east-1）** でドメイン用の SSL 証明書を発行（DNS 検証）
+2. CloudFront ディストリビューションの「一般」→「編集」
+3. 「代替ドメイン名（CNAME）」にドメイン（例: `bashotori.com`）を追加
+4. 「カスタム SSL 証明書」で上記 ACM 証明書を選択
 
-1. Route 53の「ホストゾーン」でドメインを選択
-2. 「レコードを作成」
-3. 以下の設定：
-   - **レコード名**: `@`（ルートドメイン）または `www`
-   - **レコードタイプ**: `A`
-   - **エイリアス**: `Yes`
-   - **エイリアス先**: CloudFrontディストリビューションを選択
+### 8.3 DNS で CloudFront に向ける
+
+- **Route 53**: ホストゾーンで A レコード（エイリアス）を作成し、エイリアス先に CloudFront を指定
+- **その他 DNS**: www は CNAME で CloudFront のドメイン名（`xxxxx.cloudfront.net`）を指定。ルートは ALIAS/ANAME が使えれば同様に指定
 
 ---
 
