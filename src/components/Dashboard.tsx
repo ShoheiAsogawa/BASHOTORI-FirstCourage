@@ -6,6 +6,7 @@ import { PREFECTURES } from '../types';
 import { formatDateJP } from '../lib/utils';
 import { isAdmin } from '../lib/auth';
 import type { StoreVisit } from '../types';
+import * as XLSX from 'xlsx';
 
 interface DashboardProps {
   visits: StoreVisit[];
@@ -92,6 +93,96 @@ export function Dashboard({
   const checkAdminStatus = async () => {
     const admin = await isAdmin();
     setUserIsAdmin(admin);
+  };
+
+  const sortedVisits = useMemo(() => {
+    return [...filteredVisits].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortField) {
+        case 'date':
+          aVal = new Date(a.date).getTime();
+          bVal = new Date(b.date).getTime();
+          break;
+        case 'facilityName':
+          aVal = a.facilityName || '';
+          bVal = b.facilityName || '';
+          break;
+        case 'rank':
+          const rankOrder = { S: 5, A: 4, B: 3, C: 2, D: 1 };
+          aVal = rankOrder[a.rank] || 0;
+          bVal = rankOrder[b.rank] || 0;
+          break;
+        case 'judgment':
+          const judgmentOrder = { approved: 4, negotiating: 3, pending: 2, rejected: 1 };
+          aVal = judgmentOrder[a.judgment] || 0;
+          bVal = judgmentOrder[b.judgment] || 0;
+          break;
+        case 'staffName':
+          aVal = (a.staffName || '').toLowerCase();
+          bVal = (b.staffName || '').toLowerCase();
+          break;
+        case 'prefecture':
+          aVal = (a.prefecture || '').toLowerCase();
+          bVal = (b.prefecture || '').toLowerCase();
+          break;
+        case 'environment':
+          const envOrder = { '屋内': 3, '半屋内': 2, '屋外': 1 };
+          aVal = envOrder[a.environment as keyof typeof envOrder] || 0;
+          bVal = envOrder[b.environment as keyof typeof envOrder] || 0;
+          break;
+        case 'seasonality':
+          const seasonOrder = { 'オールシーズンok': 2, '春秋ならok': 1 };
+          aVal = seasonOrder[a.seasonality as keyof typeof seasonOrder] || 0;
+          bVal = seasonOrder[b.seasonality as keyof typeof seasonOrder] || 0;
+          break;
+        case 'registerCount':
+          const regOrder = { '7台以上': 3, '4-6台': 2, '1-3台': 1 };
+          aVal = regOrder[a.registerCount as keyof typeof regOrder] || 0;
+          bVal = regOrder[b.registerCount as keyof typeof regOrder] || 0;
+          break;
+        case 'trafficCount':
+          const trafficOrder = { '多い': 3, '普通': 2, '少ない': 1 };
+          aVal = trafficOrder[a.trafficCount as keyof typeof trafficOrder] || 0;
+          bVal = trafficOrder[b.trafficCount as keyof typeof trafficOrder] || 0;
+          break;
+        default:
+          return 0;
+      }
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredVisits, sortField, sortDirection]);
+
+  const handleExportExcel = () => {
+    const rows = sortedVisits.map((visit) => ({
+      '日付': formatDateJP(visit.date),
+      '施設名': visit.facilityName || '',
+      '担当者': visit.staffName || '',
+      '都道府県': visit.prefecture || '',
+      'ランク': visit.rank || '',
+      '判定': (JUDGMENT[visit.judgment] || JUDGMENT.pending).label,
+      '環境': visit.environment || '',
+      'イミテーション台': visit.imitationTable || '',
+      'レジ設置台数': visit.registerCount || '',
+      '催事スペース': visit.spaceSize || '',
+      '通行量': visit.trafficCount || '',
+      '客層': (visit.demographics || []).join(' / '),
+      '導線評価': visit.flowLine || '',
+      '近隣競合店': visit.competitors || '',
+      '適正査定員人数': visit.staffCount || '',
+      '季節': visit.seasonality || '',
+      '客が多い曜日': visit.busyDay || '',
+      '総評': visit.overallReview || '',
+      '条件': visit.conditions || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '視察記録');
+    const now = new Date();
+    const fileName = `store-visits-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   const stats = useMemo(() => {
@@ -722,9 +813,20 @@ export function Dashboard({
               <h5 className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1">
                 <Icon name="List" size={14} /> 視察記録一覧
               </h5>
-              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                {filteredVisits.length}件
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                  {filteredVisits.length}件
+                </span>
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  disabled={sortedVisits.length === 0}
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed rounded-lg transition flex items-center gap-1"
+                >
+                  <Icon name="FileText" size={14} />
+                  Excel出力
+                </button>
+              </div>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
@@ -922,64 +1024,7 @@ export function Dashboard({
                         </td>
                       </tr>
                     ) : (
-                      [...filteredVisits]
-                        .sort((a, b) => {
-                          let aVal: any, bVal: any;
-                          switch (sortField) {
-                            case 'date':
-                              aVal = new Date(a.date).getTime();
-                              bVal = new Date(b.date).getTime();
-                              break;
-                            case 'facilityName':
-                              aVal = a.facilityName || '';
-                              bVal = b.facilityName || '';
-                              break;
-                            case 'rank':
-                              const rankOrder = { S: 5, A: 4, B: 3, C: 2, D: 1 };
-                              aVal = rankOrder[a.rank] || 0;
-                              bVal = rankOrder[b.rank] || 0;
-                              break;
-                            case 'judgment':
-                              const judgmentOrder = { approved: 4, negotiating: 3, pending: 2, rejected: 1 };
-                              aVal = judgmentOrder[a.judgment] || 0;
-                              bVal = judgmentOrder[b.judgment] || 0;
-                              break;
-                            case 'staffName':
-                              aVal = (a.staffName || '').toLowerCase();
-                              bVal = (b.staffName || '').toLowerCase();
-                              break;
-                            case 'prefecture':
-                              aVal = (a.prefecture || '').toLowerCase();
-                              bVal = (b.prefecture || '').toLowerCase();
-                              break;
-                            case 'environment':
-                              const envOrder = { '屋内': 3, '半屋内': 2, '屋外': 1 };
-                              aVal = envOrder[a.environment as keyof typeof envOrder] || 0;
-                              bVal = envOrder[b.environment as keyof typeof envOrder] || 0;
-                              break;
-                            case 'seasonality':
-                              const seasonOrder = { 'オールシーズンok': 2, '春秋ならok': 1 };
-                              aVal = seasonOrder[a.seasonality as keyof typeof seasonOrder] || 0;
-                              bVal = seasonOrder[b.seasonality as keyof typeof seasonOrder] || 0;
-                              break;
-                            case 'registerCount':
-                              const regOrder = { '7台以上': 3, '4-6台': 2, '1-3台': 1 };
-                              aVal = regOrder[a.registerCount as keyof typeof regOrder] || 0;
-                              bVal = regOrder[b.registerCount as keyof typeof regOrder] || 0;
-                              break;
-                            case 'trafficCount':
-                              const trafficOrder = { '多い': 3, '普通': 2, '少ない': 1 };
-                              aVal = trafficOrder[a.trafficCount as keyof typeof trafficOrder] || 0;
-                              bVal = trafficOrder[b.trafficCount as keyof typeof trafficOrder] || 0;
-                              break;
-                            default:
-                              return 0;
-                          }
-                          if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-                          if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-                          return 0;
-                        })
-                        .map((visit) => (
+                      sortedVisits.map((visit) => (
                           <tr
                             key={visit.id}
                             role="button"
