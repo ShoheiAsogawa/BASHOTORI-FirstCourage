@@ -7,8 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: __dirname,
-    base: process.env.VITE_BASE_PATH_OVERRIDE ?? '/BASHOTORI/',
-  plugins: [react()],
+   plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
