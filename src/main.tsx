@@ -11,9 +11,8 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/BASHOTORI-copy">
       <App />
     </BrowserRouter>
   </React.StrictMode>
 );
-
