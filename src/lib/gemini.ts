@@ -1,33 +1,7 @@
 // Gemini API呼び出し
-const AWS_API_GATEWAY_URL = import.meta.env.VITE_AWS_API_GATEWAY_URL;
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 export async function callGemini(prompt: string): Promise<string> {
-  // 優先順位: 1. API Gateway経由、2. 直接Gemini API、3. モック
-  if (AWS_API_GATEWAY_URL) {
-    // 本番環境: AWS Lambda経由
-    try {
-      const response = await fetch(AWS_API_GATEWAY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.result || data.text || 'エラー: レスポンス形式が不正です';
-    } catch (error) {
-      console.error('Error calling API Gateway:', error);
-      // フォールバック: 直接Gemini APIを試す
-    }
-  }
-
-  // 開発環境: 直接Gemini APIを呼び出す
   if (GEMINI_API_KEY) {
     // まず利用可能なモデルを確認
     try {
@@ -171,8 +145,7 @@ export async function callGemini(prompt: string): Promise<string> {
     }
   }
 
-  // モックレスポンス（APIキーも設定されていない場合）
-  console.warn('No API key or Gateway URL set, returning mock response');
+  console.warn('VITE_GEMINI_API_KEY が未設定のためモック応答を返します');
   return mockGeminiResponse(prompt);
 }
 

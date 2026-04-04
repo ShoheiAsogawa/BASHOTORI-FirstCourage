@@ -28,13 +28,13 @@
 
 3. **環境変数の管理**
    - 実際のキーは環境変数で管理
-   - AWS Amplify Consoleで設定済み
+   - GitHub Secrets やホスティング側の環境変数で設定済み
 
 ### ⚠️ 注意が必要な点
 
 1. **Git履歴に残っている可能性**
    - 以前のコミットに実際のAPIキーが含まれている可能性
-   - 特に`AMPLIFY_ENV_CHECK.md`と`QUICK_FIX_AMPLIFY.md`の古いバージョン
+   - 過去にコミットした環境変数やキーを含むドキュメントの古いバージョン
 
 2. **Supabase URL**
    - プロジェクトURLが公開されると、攻撃対象になりやすい
@@ -122,7 +122,7 @@ git push origin --force --all
 ```bash
 # 特定のファイルを履歴から削除
 git filter-branch --force --index-filter \
-  "git rm --cached --ignore-unmatch AMPLIFY_ENV_CHECK.md QUICK_FIX_AMPLIFY.md" \
+  "git rm --cached --ignore-unmatch .env .env.local" \
   --prune-empty --tag-name-filter cat -- --all
 
 # リポジトリを再パック
@@ -228,13 +228,13 @@ git push -u origin main
 
 3. **環境変数の管理**
    - 実際のキーは環境変数で管理
-   - AWS Amplify Consoleで設定済み
+   - GitHub Secrets やホスティング側の環境変数で設定済み
 
 ### ⚠️ 注意が必要な点
 
 1. **Git履歴に残っている可能性**
    - 以前のコミットに実際のAPIキーが含まれている可能性
-   - 特に`AMPLIFY_ENV_CHECK.md`と`QUICK_FIX_AMPLIFY.md`の古いバージョン
+   - 過去にコミットした環境変数やキーを含むドキュメントの古いバージョン
 
 2. **Supabase URL**
    - プロジェクトURLが公開されると、攻撃対象になりやすい
@@ -322,7 +322,7 @@ git push origin --force --all
 ```bash
 # 特定のファイルを履歴から削除
 git filter-branch --force --index-filter \
-  "git rm --cached --ignore-unmatch AMPLIFY_ENV_CHECK.md QUICK_FIX_AMPLIFY.md" \
+  "git rm --cached --ignore-unmatch .env .env.local" \
   --prune-empty --tag-name-filter cat -- --all
 
 # リポジトリを再パック

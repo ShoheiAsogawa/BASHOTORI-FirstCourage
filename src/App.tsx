@@ -69,7 +69,7 @@ function App() {
               <li>VITE_SUPABASE_ANON_KEY</li>
             </ul>
             <p className="text-xs text-slate-500 mt-4">
-              AWS Amplify Consoleで環境変数を設定してください。
+              GitHub Actions の Secrets またはローカルの .env で環境変数を設定してください。
             </p>
           </div>
         </div>

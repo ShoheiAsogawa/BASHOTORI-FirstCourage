@@ -32,12 +32,7 @@ lerna-debug.log*
 *.swo
 *~
 
-# AWS
-amplify/
-.aws/
-
 # Build artifacts
-infrastructure/lambda/function.zip
 dist/
 build/
 

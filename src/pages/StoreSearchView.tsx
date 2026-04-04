@@ -74,7 +74,7 @@ export default function StoreSearchView() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '不明なエラー';
       console.error('店舗検索エラー:', error);
-      setResult(`❌ 検索エラーが発生しました。\n\n**エラー詳細**: ${errorMessage}\n\n**対処方法**:\n- ブラウザのコンソール（F12）で詳細なエラーを確認してください\n- 環境変数（VITE_GEMINI_API_KEY または VITE_AWS_API_GATEWAY_URL）が設定されているか確認してください`);
+      setResult(`❌ 検索エラーが発生しました。\n\n**エラー詳細**: ${errorMessage}\n\n**対処方法**:\n- ブラウザのコンソール（F12）で詳細なエラーを確認してください\n- 環境変数 VITE_GEMINI_API_KEY が設定されているか確認してください`);
     } finally {
       setLoading(false);
     }
