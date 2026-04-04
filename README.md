@@ -53,7 +53,20 @@ npm run build
 2. **Settings → Secrets and variables → Actions** に `VITE_SUPABASE_URL` と `VITE_SUPABASE_ANON_KEY`、必要なら `VITE_GEMINI_API_KEY` を登録する。
 3. `main` にプッシュすると `.github/workflows/pages.yml` が `dist` をデプロイする。
 
-**プロジェクトサイト**（`https://<ユーザー>.github.io/<リポジトリ名>/`）の場合、`vite.config.ts` の `base` と `src/main.tsx` の `BrowserRouter` の `basename` を、GitHub 上の**リポジトリ名**と一致させる（現在は `BASHOTORI-FirstCourage`）。
+このリポジトリは **独自ドメイン（ルート配下）** 向けに `vite.config.ts` の `base` を `/` にしています（例: `https://bashotori.com/`）。
+
+### 独自ドメイン（例: Cloudflare の `bashotori.com`）
+
+**GitHub の無料アカウントでも、公開リポジトリの Pages に独自ドメインを付けられます**（GitHub 側の追加料金はありません。ドメインの更新料はレジストラ／Cloudflare のみ）。
+
+1. **GitHub**: リポジトリ **Settings → Pages → Custom domain** に `bashotori.com`（または `www.bashotori.com`）を入力して保存する。DNS が有効になるまで **Enforce HTTPS** はしばらく待つ。
+2. **Cloudflare DNS**（現在 CloudFront 向けの CNAME をやめる）:
+   - **ルート（`bashotori.com`）**: CNAME で CloudFront を指しているレコードは削除し、[GitHub 公式の A レコード 4 件](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain)（`185.199.108.153` など）を **`@` に向けて追加する。IPv6 用に AAAA 4 件を足してもよい。
+   - **`www`**: CNAME のターゲットを **`ShoheiAsogawa.github.io`** にする（リポジトリ名は含めない）。
+   - プロキシはまず **DNS only（グレーの雲）** で試すとトラブルが少ない。オレンジの雲にする場合は SSL/TLS を **Full** などに合わせる。
+3. **Supabase 認証**: [SUPABASE_AUTH_SETUP.md](./SUPABASE_AUTH_SETUP.md) のとおり、Site URL / リダイレクト URL に `https://bashotori.com`（および使うなら `https://www.bashotori.com`）を追加する。
+
+**補足**: `https://<ユーザー>.github.io/<リポジトリ名>/` だけで見せたい場合は、`base` を `/<リポジトリ名>/`、`BrowserRouter` に `basename="/<リポジトリ名>"` を戻す必要がある（独自ドメインのルートとは両立しにくい）。
 
 ## セットアップガイド
 
